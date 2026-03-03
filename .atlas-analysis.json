@@ -1,0 +1,145 @@
+{
+  "projectType": "saas",
+  "projectName": "MicroCBM",
+  "projectDescription": "A Next.js 15 frontend for a Condition-Based Maintenance platform that helps organizations monitor assets, track oil samples, manage alarms, and perform root cause analysis.",
+  "theme": "aspen",
+  "primaryColor": "#2563eb",
+  "lightColor": "#3b82f6",
+  "darkColor": "#1e40af",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/authentication",
+              "concepts/data-flow"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/asset-management",
+              "features/oil-sample-analysis",
+              "features/alarm-monitoring",
+              "features/recommendations",
+              "features/root-cause-analysis",
+              "features/organizations-sites",
+              "features/user-management"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/project-structure",
+              "development/environment-setup",
+              "development/routing",
+              "development/state-management",
+              "development/forms-validation"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "components/overview",
+              "components/ui-components",
+              "components/data-visualization",
+              "components/form-inputs"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/overview",
+              "deployment/environment-variables",
+              "deployment/security"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Server Actions",
+            "pages": [
+              "api/actions/overview",
+              "api/actions/assets",
+              "api/actions/samples",
+              "api/actions/alarms",
+              "api/actions/recommendations",
+              "api/actions/organizations",
+              "api/actions/auth"
+            ]
+          },
+          {
+            "group": "Type Definitions",
+            "pages": [
+              "api/types/overview",
+              "api/types/inventory",
+              "api/types/samples",
+              "api/types/alarms",
+              "api/types/recommendations",
+              "api/types/rca"
+            ]
+          },
+          {
+            "group": "Hooks",
+            "pages": [
+              "api/hooks/overview",
+              "api/hooks/use-content-guard",
+              "api/hooks/use-debounced-state",
+              "api/hooks/use-url-state",
+              "api/hooks/use-presigned-url"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "api/utilities/overview",
+              "api/utilities/constants",
+              "api/utilities/helpers",
+              "api/utilities/validators"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Asset inventory management with detailed tracking of equipment and maintenance history",
+    "Oil sample analysis with wear metals, contaminants, particle counts, and viscosity measurements",
+    "Alarm monitoring system with acknowledgment workflow and linked recommendations",
+    "Maintenance recommendations with severity levels and attachment support",
+    "Root Cause Analysis (RCA) tool with 5 Whys, Logic Tree, and Fishbone diagram templates",
+    "Multi-organization and multi-site support with role-based access control",
+    "Dashboard analytics with trend analysis and forecasting for assets, alarms, and recommendations",
+    "Sampling point and route management for systematic oil analysis collection"
+  ],
+  "publicApiSurface": [
+    "Server Actions: createAsset, updateAsset, deleteAsset, getAssets",
+    "Server Actions: createSample, updateSample, getSamples, getSampleHistory",
+    "Server Actions: getAlarms, acknowledgeAlarm, linkAlarmToRecommendation",
+    "Server Actions: createRecommendation, updateRecommendation, getRecommendations",
+    "Server Actions: createOrganization, updateOrganization, getOrganizations",
+    "Server Actions: createSite, updateSite, getSites",
+    "Server Actions: createDepartment, updateDepartment, getDepartments",
+    "Server Actions: login, register, resetPassword, verifyOtp",
+    "Types: Asset, Sample, Alarm, Recommendation, RcaRecord",
+    "Hooks: useContentGuard, useDebouncedState, useUrlState, usePresignedUrl",
+    "Components: Button, Input, Select, Table, Modal, ConfirmDialog",
+    "Components: AreaChart, BarChart, PieChart, SeverityCard, StatusBadge",
+    "RCA Components: 5 Whys editor, Logic Tree builder, Fishbone diagram"
+  ]
+}

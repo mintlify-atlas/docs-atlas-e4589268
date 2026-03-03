@@ -1,0 +1,683 @@
+---
+title: UI Components
+description: Core UI components for building MicroCBM interfaces including buttons, inputs, selects, modals, and tables
+---
+
+## Button
+
+Versatile button component with multiple variants, sizes, and states. Built with Class Variance Authority for type-safe variant management.
+
+### Props
+
+<ParamField path="variant" type="'primary' | 'outline' | 'danger' | 'secondary' | 'warning' | 'ghost'" default="primary">
+  Visual style variant of the button
+</ParamField>
+
+<ParamField path="size" type="'small' | 'medium' | 'default'" default="default">
+  Size of the button (height and padding)
+</ParamField>
+
+<ParamField path="icon" type="string">
+  Iconify icon name to display in the button
+</ParamField>
+
+<ParamField path="iconPosition" type="'left' | 'right'">
+  Position of the icon relative to button text
+</ParamField>
+
+<ParamField path="iconOnly" type="boolean" default="false">
+  Render button as icon-only with padding adjustments
+</ParamField>
+
+<ParamField path="loading" type="boolean" default="false">
+  Shows loading spinner and hides children
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Disables button interaction
+</ParamField>
+
+<ParamField path="as" type="React.ElementType" default="button">
+  Render button as a different element (e.g., Link)
+</ParamField>
+
+<ParamField path="permissions" type="PermissionType | PermissionType[]">
+  Required permissions to render the button
+</ParamField>
+
+### Usage Examples
+
+<CodeGroup>
+```tsx Primary Button
+import { Button } from "@/components";
+
+export function AssetForm() {
+  return (
+    <Button variant="primary" type="submit">
+      Save Asset
+    </Button>
+  );
+}
+```
+
+```tsx Button with Icon
+import { Button } from "@/components";
+
+export function DeleteAction() {
+  return (
+    <Button 
+      variant="danger" 
+      icon="mdi:delete"
+      iconPosition="left"
+      onClick={handleDelete}
+    >
+      Delete
+    </Button>
+  );
+}
+```
+
+```tsx Loading State
+import { Button } from "@/components";
+import { useForm } from "react-hook-form";
+
+export function SubmitForm() {
+  const { formState: { isSubmitting } } = useForm();
+  
+  return (
+    <Button loading={isSubmitting} disabled={isSubmitting}>
+      Submit
+    </Button>
+  );
+}
+```
+
+```tsx Icon-Only Button
+import { Button } from "@/components";
+
+export function EditButton() {
+  return (
+    <Button 
+      iconOnly
+      icon="mdi:pencil"
+      variant="outline"
+      size="small"
+    />
+  );
+}
+```
+
+```tsx As Link
+import { Button } from "@/components";
+
+export function NavigateButton() {
+  return (
+    <Button as="a" href="/assets/add">
+      Add New Asset
+    </Button>
+  );
+}
+```
+</CodeGroup>
+
+<Note>
+  The Button component uses `ComponentGuard` internally for permission-based rendering.
+</Note>
+
+## Input
+
+Flexible input component supporting text, password, textarea, and custom prefix/suffix elements.
+
+### Props
+
+<ParamField path="label" type="string">
+  Label text displayed above the input
+</ParamField>
+
+<ParamField path="type" type="string | 'textarea'" default="text">
+  Input type (text, password, email, date, etc.) or textarea
+</ParamField>
+
+<ParamField path="error" type="string | boolean">
+  Error message or boolean to show error state
+</ParamField>
+
+<ParamField path="disabled" type="boolean">
+  Disables input interaction
+</ParamField>
+
+<ParamField path="prefix" type="React.ReactNode">
+  Content to display before the input field
+</ParamField>
+
+<ParamField path="suffix" type="React.ReactNode">
+  Content to display after the input field
+</ParamField>
+
+<ParamField path="rows" type="number">
+  Number of rows for textarea type
+</ParamField>
+
+<ParamField path="innerClassName" type="string">
+  Custom classes for the inner wrapper
+</ParamField>
+
+<ParamField path="inputClassName" type="string">
+  Custom classes for the input element itself
+</ParamField>
+
+### Usage Examples
+
+<CodeGroup>
+```tsx Basic Input
+import Input from "@/components/input/Input";
+import { useForm } from "react-hook-form";
+
+export function AssetForm() {
+  const { register, formState: { errors } } = useForm();
+  
+  return (
+    <Input
+      label="Asset Name"
+      {...register("name")}
+      error={errors.name?.message}
+    />
+  );
+}
+```
+
+```tsx Password Input
+import Input from "@/components/input/Input";
+
+export function LoginForm() {
+  return (
+    <Input
+      type="password"
+      label="Password"
+      name="password"
+      placeholder="Enter your password"
+    />
+  );
+}
+```
+
+```tsx Textarea
+import Input from "@/components/input/Input";
+
+export function DescriptionField() {
+  return (
+    <Input
+      type="textarea"
+      label="Description"
+      name="description"
+      rows={4}
+      placeholder="Enter description..."
+    />
+  );
+}
+```
+
+```tsx With Prefix Icon
+import Input from "@/components/input/Input";
+import { Icon } from "@/libs";
+
+export function SearchInput() {
+  return (
+    <Input
+      placeholder="Search assets..."
+      prefix={<Icon icon="mdi:magnify" className="text-grey" />}
+    />
+  );
+}
+```
+</CodeGroup>
+
+<Note>
+  Password inputs automatically show/hide toggle icon. The component uses `forwardRef` for form library compatibility.
+</Note>
+
+## Select
+
+Accessible dropdown select component built on Radix UI primitives.
+
+### Components
+
+The Select component is composed of multiple sub-components:
+
+- `Select` - Root component
+- `SelectTrigger` - Trigger button with label and error support
+- `SelectValue` - Displays selected value
+- `SelectContent` - Dropdown container
+- `SelectItem` - Individual option
+- `SelectGroup` - Groups related items
+- `SelectLabel` - Label for groups
+
+### Props
+
+<ParamField path="label" type="string">
+  Label text displayed above the select (on SelectTrigger)
+</ParamField>
+
+<ParamField path="error" type="string | boolean">
+  Error message or state (on SelectTrigger)
+</ParamField>
+
+<ParamField path="size" type="'sm' | 'default'" default="default">
+  Size variant of the select trigger
+</ParamField>
+
+### Usage Examples
+
+<CodeGroup>
+```tsx Basic Select
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components";
+import { Controller } from "react-hook-form";
+
+export function AssetTypeSelect({ control, errors }) {
+  return (
+    <Controller
+      name="asset_type"
+      control={control}
+      render={({ field }) => (
+        <Select value={field.value} onValueChange={field.onChange}>
+          <SelectTrigger label="Asset Type" error={errors.asset_type?.message}>
+            <SelectValue placeholder="Select asset type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pump">Pump</SelectItem>
+            <SelectItem value="motor">Motor</SelectItem>
+            <SelectItem value="compressor">Compressor</SelectItem>
+            <SelectItem value="turbine">Turbine</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
+    />
+  );
+}
+```
+
+```tsx With Groups
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components";
+
+export function SeveritySelect() {
+  return (
+    <Select>
+      <SelectTrigger label="Severity">
+        <SelectValue placeholder="Select severity" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectLabel>Alarm Severity</SelectLabel>
+          <SelectItem value="low">Low</SelectItem>
+          <SelectItem value="medium">Medium</SelectItem>
+          <SelectItem value="high">High</SelectItem>
+        </SelectGroup>
+        <SelectGroup>
+          <SelectLabel>Critical</SelectLabel>
+          <SelectItem value="critical">Critical</SelectItem>
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+```
+
+```tsx Small Size
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components";
+
+export function CompactSelect() {
+  return (
+    <Select>
+      <SelectTrigger size="sm">
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="active">Active</SelectItem>
+        <SelectItem value="inactive">Inactive</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+```
+</CodeGroup>
+
+## Modal
+
+Animated modal dialog with center and side panel positions.
+
+### Props
+
+<ParamField path="isOpen" type="boolean" required>
+  Controls modal visibility
+</ParamField>
+
+<ParamField path="setIsOpen" type="(open: boolean) => void" required>
+  Callback to change modal state
+</ParamField>
+
+<ParamField path="position" type="'center' | 'side'" default="center">
+  Modal position - center overlay or side panel
+</ParamField>
+
+<ParamField path="title" type="string">
+  Title displayed in modal header (required for side position)
+</ParamField>
+
+<ParamField path="showClose" type="boolean">
+  Show close button (for center position)
+</ParamField>
+
+<ParamField path="panelClass" type="string">
+  Custom classes for the modal panel
+</ParamField>
+
+<ParamField path="overflowHidden" type="boolean">
+  Apply overflow hidden to panel
+</ParamField>
+
+### Usage Examples
+
+<CodeGroup>
+```tsx Center Modal
+import { Modal, Button } from "@/components";
+import { useState } from "react";
+
+export function DeleteAssetModal() {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <>
+      <Button onClick={() => setIsOpen(true)}>Delete</Button>
+      <Modal 
+        isOpen={isOpen} 
+        setIsOpen={setIsOpen}
+        position="center"
+        showClose
+      >
+        <div className="p-6">
+          <h2 className="text-xl font-bold mb-4">Confirm Deletion</h2>
+          <p className="mb-6">Are you sure you want to delete this asset?</p>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+```
+
+```tsx Side Panel
+import { Modal } from "@/components";
+import { useState } from "react";
+
+export function AssetDetailsPanel() {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <Modal
+      isOpen={isOpen}
+      setIsOpen={setIsOpen}
+      position="side"
+      title="Asset Details"
+    >
+      <div className="px-6 space-y-4">
+        <div>
+          <h3 className="font-semibold">Asset Name</h3>
+          <p className="text-gray-600">Hydraulic Pump #42</p>
+        </div>
+        <div>
+          <h3 className="font-semibold">Status</h3>
+          <p className="text-gray-600">Active</p>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+```
+</CodeGroup>
+
+<Note>
+  Modal uses Framer Motion for animations and Radix UI Dialog primitives for accessibility.
+</Note>
+
+## Table
+
+Data table component powered by TanStack Table for flexible data display.
+
+### Props
+
+<ParamField path="columns" type="ColumnDef[]" required>
+  Column definitions from TanStack Table
+</ParamField>
+
+<ParamField path="data" type="Record<string, unknown>[]" required>
+  Array of data objects to display
+</ParamField>
+
+<ParamField path="onRowClick" type="(rowData) => void">
+  Callback when a row is clicked
+</ParamField>
+
+### Usage Example
+
+```tsx src/app/(home)/assets/components/AssetTable.tsx
+import { Table } from "@/components";
+import { createColumnHelper } from "@tanstack/react-table";
+
+const columnHelper = createColumnHelper();
+
+const columns = [
+  columnHelper.accessor("name", {
+    header: "Asset Name",
+    cell: (info) => info.getValue(),
+  }),
+  columnHelper.accessor("type", {
+    header: "Type",
+    cell: (info) => info.getValue(),
+  }),
+  columnHelper.accessor("status", {
+    header: "Status",
+    cell: (info) => <StatusBadge status={info.getValue()} />,
+  }),
+];
+
+export function AssetTable({ assets }) {
+  const handleRowClick = (rowData) => {
+    router.push(`/assets/${rowData.id}`);
+  };
+  
+  return <Table columns={columns} data={assets} onRowClick={handleRowClick} />;
+}
+```
+
+## StatusBadge
+
+Colored badge component for displaying status information.
+
+### Props
+
+<ParamField path="status" type="StatusBadgeStatus" required>
+  Status value: 'Active' | 'Inactive' | 'Pending' | 'Low' | 'Medium' | 'High' | 'Acknowledged' | 'Unacknowledged'
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes
+</ParamField>
+
+### Usage Example
+
+```tsx
+import { StatusBadge } from "@/components";
+
+export function AlarmRow({ alarm }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span>{alarm.name}</span>
+      <StatusBadge status={alarm.severity} />
+      <StatusBadge status={alarm.acknowledged ? "Acknowledged" : "Unacknowledged"} />
+    </div>
+  );
+}
+```
+
+## ConfirmDialog
+
+Pre-styled confirmation dialog for delete and destructive actions.
+
+### Props
+
+<ParamField path="isOpen" type="boolean" required>
+  Dialog visibility state
+</ParamField>
+
+<ParamField path="reject" type="() => void" required>
+  Callback for cancel action
+</ParamField>
+
+<ParamField path="accept" type="() => void" required>
+  Callback for confirm action
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  Dialog title
+</ParamField>
+
+<ParamField path="bodyText" type="string | React.ReactNode" required>
+  Dialog body content
+</ParamField>
+
+<ParamField path="actionText" type="string" default="Delete">
+  Text for confirm button
+</ParamField>
+
+<ParamField path="icon" type="IconNames">
+  Icon to display in dialog
+</ParamField>
+
+<ParamField path="isLoading" type="boolean">
+  Loading state for confirm button
+</ParamField>
+
+### Usage Example
+
+```tsx
+import { ConfirmDialog } from "@/components";
+import { useState } from "react";
+
+export function DeleteAssetButton({ assetId }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    await deleteAsset(assetId);
+    setIsDeleting(false);
+    setShowConfirm(false);
+  };
+  
+  return (
+    <>
+      <Button variant="danger" onClick={() => setShowConfirm(true)}>
+        Delete
+      </Button>
+      <ConfirmDialog
+        isOpen={showConfirm}
+        reject={() => setShowConfirm(false)}
+        accept={handleDelete}
+        title="Delete Asset"
+        bodyText="Are you sure you want to delete this asset? This action cannot be undone."
+        actionText="Delete"
+        isLoading={isDeleting}
+      />
+    </>
+  );
+}
+```
+
+## Tag
+
+Small colored tag component for labels and categories.
+
+### Props
+
+<ParamField path="value" type="string" required>
+  Text content of the tag
+</ParamField>
+
+<ParamField path="variant" type="'error' | 'warning' | 'success' | 'gray'" default="gray">
+  Color variant
+</ParamField>
+
+### Usage Example
+
+```tsx
+import { Tag } from "@/components";
+
+export function AssetTags({ asset }) {
+  return (
+    <div className="flex gap-2">
+      <Tag value={asset.type} variant="gray" />
+      <Tag value={asset.criticality} variant="warning" />
+    </div>
+  );
+}
+```
+
+## Checkbox
+
+Accessible checkbox component using Radix UI primitives.
+
+### Usage Example
+
+```tsx
+import { Checkbox } from "@/components";
+import { Controller } from "react-hook-form";
+
+export function AcknowledgeCheckbox({ control }) {
+  return (
+    <Controller
+      name="acknowledged_status"
+      control={control}
+      render={({ field }) => (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={field.value}
+            onCheckedChange={field.onChange}
+            id="acknowledged"
+          />
+          <label htmlFor="acknowledged" className="text-sm">
+            Mark as Acknowledged
+          </label>
+        </div>
+      )}
+    />
+  );
+}
+```
+
+## Related Components
+
+For additional UI components, see:
+
+- [Data Visualization Components](/components/data-visualization)
+- [Form Input Components](/components/form-inputs)

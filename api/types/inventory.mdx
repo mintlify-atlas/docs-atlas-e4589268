@@ -1,0 +1,460 @@
+---
+title: 'Inventory Types'
+description: 'Type definitions for assets, sites, and inventory management'
+icon: 'warehouse'
+---
+
+## Asset
+
+Represents a physical asset (equipment) in the system with complete maintenance history and metadata.
+
+```typescript
+interface Asset {
+  id: string;
+  name: string;
+  tag: string;
+  type: string;
+  equipment_class: string;
+  manufacturer: string;
+  model_number: string;
+  serial_number: string;
+  criticality_level: string;
+  operating_hours: string;
+  commissioned_date: string;
+  status: string;
+  maintenance_strategy: string;
+  last_performed_maintenance: string;
+  major_overhaul: string;
+  last_date_overhaul: string;
+  power_rating: string;
+  speed: string;
+  capacity: string;
+  is_modified: boolean;
+  datasheet: {
+    file_url: string;
+    file_name: string;
+    uploaded_at: string;
+  } | null;
+  assignee: AssigneeDetails;
+  parent_site: SiteReference;
+  created_at: number;
+  created_at_datetime: string;
+  updated_at: number;
+  updated_at_datetime: string;
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the asset
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Human-readable name of the asset
+</ResponseField>
+
+<ResponseField name="tag" type="string" required>
+  Asset tag or identification number used in physical labeling
+</ResponseField>
+
+<ResponseField name="type" type="string" required>
+  Asset type classification (e.g., "Pump", "Motor", "Compressor")
+</ResponseField>
+
+<ResponseField name="equipment_class" type="string" required>
+  Equipment class for categorization
+</ResponseField>
+
+<ResponseField name="manufacturer" type="string" required>
+  Manufacturer name
+</ResponseField>
+
+<ResponseField name="model_number" type="string" required>
+  Manufacturer's model number
+</ResponseField>
+
+<ResponseField name="serial_number" type="string" required>
+  Unique serial number from manufacturer
+</ResponseField>
+
+<ResponseField name="criticality_level" type="string" required>
+  Asset criticality (e.g., "High", "Medium", "Low")
+</ResponseField>
+
+<ResponseField name="operating_hours" type="string" required>
+  Total operating hours as a string
+</ResponseField>
+
+<ResponseField name="commissioned_date" type="string" required>
+  Date when the asset was commissioned
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current operational status
+</ResponseField>
+
+<ResponseField name="maintenance_strategy" type="string" required>
+  Maintenance approach (e.g., "Preventive", "Predictive", "Corrective")
+</ResponseField>
+
+<ResponseField name="last_performed_maintenance" type="string" required>
+  Date of last maintenance activity
+</ResponseField>
+
+<ResponseField name="major_overhaul" type="string" required>
+  Description of major overhaul work
+</ResponseField>
+
+<ResponseField name="last_date_overhaul" type="string" required>
+  Date of last major overhaul
+</ResponseField>
+
+<ResponseField name="power_rating" type="string" required>
+  Power rating specification
+</ResponseField>
+
+<ResponseField name="speed" type="string" required>
+  Operating speed specification
+</ResponseField>
+
+<ResponseField name="capacity" type="string" required>
+  Capacity specification
+</ResponseField>
+
+<ResponseField name="is_modified" type="boolean" required>
+  Indicates if the asset has been modified from original specifications
+</ResponseField>
+
+<ResponseField name="datasheet" type="object | null">
+  Attached datasheet file information
+  
+  <Expandable title="Datasheet object">
+    <ResponseField name="file_url" type="string">
+      URL to the datasheet file
+    </ResponseField>
+    <ResponseField name="file_name" type="string">
+      Original filename
+    </ResponseField>
+    <ResponseField name="uploaded_at" type="string">
+      Upload timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="assignee" type="object" required>
+  User assigned to maintain this asset
+  
+  <Expandable title="Assignee details">
+    <ResponseField name="id" type="string">
+      User ID
+    </ResponseField>
+    <ResponseField name="first_name" type="string">
+      User's first name
+    </ResponseField>
+    <ResponseField name="last_name" type="string">
+      User's last name
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    <ResponseField name="phone" type="string">
+      User's phone number
+    </ResponseField>
+    <ResponseField name="role" type="string">
+      User's role name
+    </ResponseField>
+    <ResponseField name="role_id" type="string">
+      User's role ID
+    </ResponseField>
+    <ResponseField name="organization" type="object">
+      User's organization details
+    </ResponseField>
+    <ResponseField name="site" type="object">
+      User's site assignment
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="parent_site" type="object" required>
+  Site where this asset is located
+  
+  <Expandable title="Site reference">
+    <ResponseField name="id" type="string">
+      Site ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Site name
+    </ResponseField>
+    <ResponseField name="tag" type="string">
+      Site tag
+    </ResponseField>
+    <ResponseField name="installation_environment" type="string">
+      Environment type
+    </ResponseField>
+    <ResponseField name="regulations_and_standards" type="string[]">
+      Applicable regulations
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="created_at" type="number" required>
+  Creation timestamp (Unix milliseconds)
+</ResponseField>
+
+<ResponseField name="created_at_datetime" type="string" required>
+  Creation timestamp (ISO 8601 string)
+</ResponseField>
+
+<ResponseField name="updated_at" type="number" required>
+  Last update timestamp (Unix milliseconds)
+</ResponseField>
+
+<ResponseField name="updated_at_datetime" type="string" required>
+  Last update timestamp (ISO 8601 string)
+</ResponseField>
+
+---
+
+## Sites
+
+Represents a physical site or facility that contains assets.
+
+```typescript
+interface Sites {
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  address: string;
+  city: string;
+  country: string;
+  installation_environment: string;
+  regulations_and_standards: string[];
+  manager_name: string;
+  manager_email: string;
+  manager_phone_number: string;
+  manager_location: string;
+  organization: OrganizationReference;
+  attachments: unknown;
+  members: unknown;
+  created_at: number;
+  created_at_datetime: string;
+  updated_at: number;
+  updated_at_datetime: string;
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the site
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Site name
+</ResponseField>
+
+<ResponseField name="tag" type="string" required>
+  Site tag or code
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Detailed description of the site
+</ResponseField>
+
+<ResponseField name="address" type="string" required>
+  Physical street address
+</ResponseField>
+
+<ResponseField name="city" type="string" required>
+  City location
+</ResponseField>
+
+<ResponseField name="country" type="string" required>
+  Country location
+</ResponseField>
+
+<ResponseField name="installation_environment" type="string" required>
+  Type of installation environment (e.g., "Indoor", "Outdoor", "Marine")
+</ResponseField>
+
+<ResponseField name="regulations_and_standards" type="string[]" required>
+  Array of applicable regulations and standards
+</ResponseField>
+
+<ResponseField name="manager_name" type="string" required>
+  Site manager's full name
+</ResponseField>
+
+<ResponseField name="manager_email" type="string" required>
+  Site manager's email
+</ResponseField>
+
+<ResponseField name="manager_phone_number" type="string" required>
+  Site manager's phone number
+</ResponseField>
+
+<ResponseField name="manager_location" type="string" required>
+  Site manager's location
+</ResponseField>
+
+<ResponseField name="organization" type="object" required>
+  Parent organization details
+  
+  <Expandable title="Organization fields">
+    <ResponseField name="id" type="string">
+      Organization ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Organization name
+    </ResponseField>
+    <ResponseField name="industry" type="string">
+      Industry type
+    </ResponseField>
+    <ResponseField name="team_strength" type="string">
+      Team size
+    </ResponseField>
+    <ResponseField name="logo_url" type="string">
+      Organization logo URL
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## SitesAnalytics
+
+Analytics data for sites with issues tracking.
+
+```typescript
+interface SitesAnalytics {
+  total_sites: number;
+  sites_trend_percentage: number;
+  sites_with_issues: number;
+  issues_trend_percentage: number;
+}
+```
+
+### Fields
+
+<ResponseField name="total_sites" type="number" required>
+  Total number of sites in the organization
+</ResponseField>
+
+<ResponseField name="sites_trend_percentage" type="number" required>
+  Percentage change in total sites compared to previous period
+</ResponseField>
+
+<ResponseField name="sites_with_issues" type="number" required>
+  Number of sites with active issues or alarms
+</ResponseField>
+
+<ResponseField name="issues_trend_percentage" type="number" required>
+  Percentage change in sites with issues
+</ResponseField>
+
+---
+
+## AssetAnalytics
+
+Comprehensive analytics for asset inventory and health monitoring.
+
+```typescript
+interface AssetAnalytics {
+  total_assets: number;
+  asset_trend: {
+    growth: number;
+    percentage: number;
+  };
+  critical_assets: {
+    total: number;
+    trend: {
+      growth: number;
+      percentage: number;
+    };
+  };
+  assets_with_alarms: {
+    total: number;
+    trend: {
+      growth: number;
+      percentage: number;
+    };
+  };
+}
+```
+
+### Fields
+
+<ResponseField name="total_assets" type="number" required>
+  Total number of assets
+</ResponseField>
+
+<ResponseField name="asset_trend" type="object" required>
+  Overall asset count trend
+  
+  <Expandable title="Trend object">
+    <ResponseField name="growth" type="number">
+      Absolute change in asset count
+    </ResponseField>
+    <ResponseField name="percentage" type="number">
+      Percentage change
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="critical_assets" type="object" required>
+  Critical asset metrics
+  
+  <Expandable title="Critical assets">
+    <ResponseField name="total" type="number">
+      Number of critical assets
+    </ResponseField>
+    <ResponseField name="trend" type="object">
+      Trend data with growth and percentage fields
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="assets_with_alarms" type="object" required>
+  Assets with active alarms
+  
+  <Expandable title="Assets with alarms">
+    <ResponseField name="total" type="number">
+      Number of assets with alarms
+    </ResponseField>
+    <ResponseField name="trend" type="object">
+      Trend data with growth and percentage fields
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Usage Example
+
+```typescript
+import type { Asset, Sites, AssetAnalytics } from '@/types';
+
+// Fetch and type asset data
+const asset: Asset = await getAssetById(assetId);
+
+console.log(`Asset: ${asset.name} (${asset.tag})`);
+console.log(`Criticality: ${asset.criticality_level}`);
+console.log(`Site: ${asset.parent_site.name}`);
+
+// Use analytics
+const analytics: AssetAnalytics = await getAssetAnalytics();
+console.log(`Total: ${analytics.total_assets}`);
+console.log(`Critical: ${analytics.critical_assets.total}`);
+```
+
+## Related Types
+
+<CardGroup cols={2}>
+  <Card title="Sample Types" icon="flask" href="/api/types/samples">
+    Oil samples are linked to assets
+  </Card>
+  
+  <Card title="Alarm Types" icon="bell" href="/api/types/alarms">
+    Alarms are triggered by asset conditions
+  </Card>
+</CardGroup>

@@ -1,0 +1,169 @@
+---
+title: Utilities Overview
+description: Shared utility functions, constants, and validation schemas for MicroCBM
+---
+
+The utilities module provides a collection of reusable helpers, constants, validation schemas, and role-based access control utilities used throughout the MicroCBM application.
+
+## Module Structure
+
+The utilities are organized into the following categories:
+
+### Constants
+
+Application-wide constants including:
+- Environment configuration and API URLs
+- Status and severity options for dropdowns
+- Asset types and component configurations
+- Modal identifiers and permission modules
+- Filter options for users, transactions, and entities
+
+See [Constants](/api/utilities/constants) for detailed reference.
+
+### Helper Functions
+
+Utility functions for common operations:
+- **Date formatting** - Convert timestamps to user timezones
+- **String manipulation** - kebab-case, sentence case, camelCase conversions
+- **File operations** - CSV generation and download
+- **Status helpers** - Get variants and text for UI components
+- **Pagination** - Generate page lists with ellipsis
+- **Role utilities** - Extract permissions and determine routes
+
+See [Helpers](/api/utilities/helpers) for detailed reference.
+
+### Validation Schemas
+
+Zod-based validation schemas for forms and API payloads:
+- **Shared validators** - Email, password, phone number, numeric strings
+- **Entity schemas** - Assets, samples, alarms, recommendations
+- **Auth schemas** - Sign up, login, OTP verification
+- **Organization schemas** - Sites, departments, organizations
+
+See [Validators](/api/utilities/validators) for detailed reference.
+
+## Installation
+
+Utilities are exported from `@/utils` and can be imported directly:
+
+```typescript
+import { formatDate, getStatusVariant, ROUTES } from "@/utils";
+import { getRequiredStringSchema, ADD_ASSET_SCHEMA } from "@/schema";
+```
+
+## Usage Example
+
+<CodeGroup>
+```typescript Formatting Dates
+import { formatDate } from "@/utils";
+
+const timestamp = 1709481600000;
+const formatted = formatDate(timestamp, "DD/MM/YYYY", "America/New_York");
+// Output: "03/03/2024"
+```
+
+```typescript Generating CSV
+import { generateAndDownloadCsv } from "@/utils";
+
+const data = [
+  { id: 1, name: "Asset A", status: "active" },
+  { id: 2, name: "Asset B", status: "inactive" },
+];
+
+generateAndDownloadCsv({
+  headers: [
+    { name: "ID", accessor: "id" },
+    { name: "Name", accessor: "name" },
+    { name: "Status", accessor: "status" },
+  ],
+  data,
+  fileName: "assets-export",
+});
+```
+
+```typescript Validating Forms
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ADD_ASSET_SCHEMA } from "@/schema";
+
+const form = useForm({
+  resolver: zodResolver(ADD_ASSET_SCHEMA),
+});
+```
+</CodeGroup>
+
+## Common Patterns
+
+### Status Badge Variants
+
+Use `getStatusVariant()` to determine the appropriate color variant for status badges:
+
+```typescript
+import { getStatusVariant } from "@/utils";
+
+const variant = getStatusVariant("active"); // Returns "success"
+const criticalVariant = getStatusVariant("critical"); // Returns "error"
+```
+
+### Permission-Based Routing
+
+Use `getFirstRouteFromUser()` to redirect users based on their permissions:
+
+```typescript
+import { getFirstRouteFromUser } from "@/utils";
+import menuItems from "@/utils/shared";
+
+const userPermissions = ["assets:read", "samples:read"];
+const route = getFirstRouteFromUser(menuItems, userPermissions);
+// Returns "/assets" (first matching route)
+```
+
+### Query String Building
+
+Use `getQueryString()` to build URL query parameters:
+
+```typescript
+import { getQueryString } from "@/utils";
+
+const params = {
+  page: 1,
+  limit: 10,
+  status: "active",
+  search: "", // Will be excluded
+};
+
+const queryString = getQueryString(params);
+// Returns "page=1&limit=10&status=active"
+```
+
+## Best Practices
+
+<Note>
+**Validation First**: Always use Zod schemas to validate user input before sending data to server actions. This ensures type safety and prevents invalid data from reaching the API.
+</Note>
+
+<Note>
+**Timezone Awareness**: When displaying dates, always use `formatDate()` with the user's timezone to ensure accurate time representation across different regions.
+</Note>
+
+<Note>
+**CSV Export**: Use `generateAndDownloadCsv()` for client-side data exports. The function handles proper escaping and encoding of CSV data.
+</Note>
+
+## Type Safety
+
+All utilities are written in TypeScript and include proper type definitions. Zod schemas automatically infer TypeScript types:
+
+```typescript
+import { z } from "zod";
+import { ADD_ASSET_SCHEMA } from "@/schema";
+
+type AddAssetPayload = z.infer<typeof ADD_ASSET_SCHEMA>;
+// Fully typed based on the schema
+```
+
+## Related Resources
+
+- [Server Actions](/api/actions/overview) - Use validated data with server actions
+- [Type Definitions](/api/types/overview) - Entity type definitions
+- [Forms & Validation](/development/forms-validation) - Form handling guide

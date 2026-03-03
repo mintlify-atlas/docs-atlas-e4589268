@@ -1,0 +1,228 @@
+---
+title: Oil Sample Analysis
+description: Track oil quality with detailed analysis of wear metals, contaminants, particle counts, and viscosity
+---
+
+## Overview
+
+Oil Sample Analysis is the cornerstone of condition-based maintenance in MicroCBM. By monitoring lubricant condition, you can detect early warning signs of equipment wear, contamination, and impending failures before they cause costly downtime.
+
+<Info>
+  Oil samples are collected at designated sampling points on assets and analyzed by labs to track trends over time.
+</Info>
+
+## What is Monitored
+
+Each oil sample includes four key measurement categories:
+
+### Wear Metals
+
+Trace elements indicating internal component wear:
+- **Iron (Fe)**: Gears, shafts, bearings, cylinders
+- **Copper (Cu)**: Bearings, bushings, thrust washers
+- **Aluminum (Al)**: Pistons, bearings
+- **Chromium (Cr)**: Piston rings, shafts
+- **Lead (Pb)**: Bearings, solder
+- **Tin (Sn)**: Bearings, bushings
+
+<Tip>
+  Rising wear metal concentrations indicate accelerating component degradation.
+</Tip>
+
+### Contaminants
+
+External substances that degrade oil quality:
+- **Silicon (Si)**: Dirt, dust, airborne contamination
+- **Sodium (Na)**: Coolant leaks
+- **Water (H₂O)**: Condensation, seal leaks
+- **Fuel Dilution**: Incomplete combustion
+
+### Particle Counts
+
+ISO cleanliness codes measuring particle sizes:
+- **4μm**: Fine particles
+- **6μm**: Medium particles
+- **14μm**: Large particles
+
+Reported as ISO code (e.g., 18/16/13) indicating contamination severity.
+
+### Viscosity Levels
+
+Oil thickness at different temperatures:
+- Measured in centistokes (cSt) or centipoise (cP)
+- Indicates oil degradation and additive depletion
+- Deviations suggest oxidation, fuel dilution, or wrong oil grade
+
+## Sample History & Trend Analysis
+
+The **Sample History** page provides powerful trend visualization to identify developing issues.
+
+<Steps>
+  <Step title="Select Filters">
+    Choose the parameters to analyze:
+    - **Organization**: (SuperAdmin only) Select which organization
+    - **Site**: Filter by site location
+    - **Asset**: Select the equipment
+    - **Sampling Point**: Choose the specific sample location (required)
+    - **Date Range**: Optionally limit the time period
+  </Step>
+
+  <Step title="Load Chart">
+    Click **Load chart** to generate the trend visualization.
+  </Step>
+
+  <Step title="Analyze Trends">
+    Review the line chart showing:
+    - **X-axis**: Sample dates (chronological)
+    - **Y-axis**: Concentration values in ppm (parts per million)
+    - **Series**: Each wear metal and contaminant plotted as a separate line with distinct colors
+    
+    Look for:
+    - **Steady increases**: Gradual wear
+    - **Sudden spikes**: Catastrophic events
+    - **Declining trends**: Effective corrective actions
+  </Step>
+
+  <Step title="Investigate Anomalies">
+    Hover over data points to see exact values. If you notice concerning trends:
+    - Create a [Recommendation](/features/recommendations) for corrective action
+    - Link to any related [Alarms](/features/alarm-monitoring)
+    - Initiate a [Root Cause Analysis](/features/root-cause-analysis) if failure occurs
+  </Step>
+</Steps>
+
+<Note>
+  The chart displays up to 50 samples per query. Use date range filtering to focus on specific periods.
+</Note>
+
+## Sampling Points
+
+Sampling points define where oil samples are collected on an asset. Each asset can have multiple sampling points:
+
+- **Engine Oil**: Main crankcase
+- **Hydraulic System**: Reservoir, return line
+- **Gearbox**: Input, output, or intermediate stages
+- **Turbine**: Bearing oil, control oil
+
+### Creating Sampling Points
+
+1. Navigate to **Sampling Points**
+2. Click **Add New Sampling Point**
+3. Enter:
+   - **Name** and **Tag**: Descriptive identifier
+   - **Parent Asset**: Link to the equipment
+   - **Location Details**: Where on the asset to sample
+4. Click **Create**
+
+## Sampling Routes
+
+Sampling routes organize multiple sampling points into a scheduled collection sequence for field technicians.
+
+### Benefits of Sampling Routes
+
+- **Efficiency**: Group nearby sampling points for systematic collection
+- **Consistency**: Ensure all critical points are sampled on schedule
+- **Tracking**: Monitor route completion and missed samples
+- **Planning**: Assign routes to specific technicians or shifts
+
+### Creating a Sampling Route
+
+1. Go to **Sampling Routes**
+2. Click **Add New Sampling Route**
+3. Define route details:
+   - **Route Name**: Descriptive identifier
+   - **Site**: Location where samples are collected
+   - **Frequency**: Daily, weekly, monthly, etc.
+4. Add sampling points to the route
+5. Assign technician or team
+6. Save the route
+
+## Recording Sample Results
+
+When lab results are received:
+
+<Steps>
+  <Step title="Navigate to Sample History">
+    Or use the **Add Sample** button from the sampling point or asset page.
+  </Step>
+
+  <Step title="Enter Sample Metadata">
+    - **Serial Number**: Lab-assigned sample ID
+    - **Date Sampled**: When the sample was collected
+    - **Lab Name**: Testing laboratory
+    - **Service Meter Reading**: Equipment runtime hours
+    - **Oil in Service**: Hours since last oil change
+    - **Filter Changed**: Whether filter was replaced
+    - **Oil Drained**: Amount of oil removed
+  </Step>
+
+  <Step title="Input Wear Metals">
+    For each element, enter:
+    - **Element**: Fe, Cu, Al, Cr, Pb, Sn, etc.
+    - **Value**: Concentration
+    - **Unit**: ppm (parts per million)
+  </Step>
+
+  <Step title="Enter Contaminants">
+    Record contamination levels:
+    - **Type**: Si, Na, Water, Fuel
+    - **Value**: Concentration or percentage
+    - **Unit**: ppm or %
+  </Step>
+
+  <Step title="Add Particle Counts">
+    Input ISO code or individual counts:
+    - **Size Range**: 4μm, 6μm, 14μm
+    - **Count**: Particles per milliliter
+  </Step>
+
+  <Step title="Record Viscosity">
+    - **Temperature**: Test temperature (°C)
+    - **Viscosity**: Value in cSt or cP
+  </Step>
+
+  <Step title="Set Severity">
+    Assign severity based on lab report: Low, Medium, High, or Critical.
+  </Step>
+
+  <Step title="Save Sample">
+    Click **Create Sample** to save the results.
+  </Step>
+</Steps>
+
+<Tip>
+  Configure alarm thresholds to automatically flag samples with abnormal values.
+</Tip>
+
+## Interpreting Results
+
+### Normal vs. Abnormal Trends
+
+| Indicator | Normal | Warning | Critical |
+|-----------|--------|---------|----------|
+| **Wear Metals** | Stable, low levels | Gradual increase | Sudden spike or sustained high levels |
+| **Silicon** | Less than 10 ppm | 10-30 ppm | Greater than 30 ppm |
+| **Water** | Less than 500 ppm | 500-1000 ppm | Greater than 1000 ppm |
+| **Viscosity** | Within grade spec | ±10% deviation | Greater than 20% deviation |
+| **ISO Code** | 18/16/13 or better | 19/17/14 to 20/18/15 | Greater than 21/19/16 |
+
+<Warning>
+  Always consult OEM specifications and lab recommendations. These are general guidelines only.
+</Warning>
+
+## Best Practices
+
+1. **Sample Consistently**: Take samples at regular intervals and similar operating conditions
+2. **Use Clean Bottles**: Prevent external contamination during collection
+3. **Label Clearly**: Include asset tag, sampling point, date, and sampler name
+4. **Warm Oil**: Sample when oil is at operating temperature for accurate viscosity
+5. **Avoid Settling**: Don't sample immediately after shutdown when particles settle
+6. **Trend Analysis**: Compare results to baseline and previous samples, not just limits
+7. **Act on Results**: Create recommendations or alarms when trends indicate action needed
+
+## Related Features
+
+- **[Asset Management](/features/asset-management)**: Link samples to specific equipment
+- **[Alarms](/features/alarm-monitoring)**: Automated alerts when parameters exceed thresholds
+- **[Recommendations](/features/recommendations)**: Track corrective actions based on sample results
+- **[Organizations & Sites](/features/organizations-sites)**: Organize sampling by location

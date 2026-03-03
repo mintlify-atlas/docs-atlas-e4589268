@@ -1,0 +1,340 @@
+---
+title: Root Cause Analysis (RCA)
+description: Investigate equipment failures with structured methodologies including 5 Whys, Logic Trees, and Fishbone diagrams
+---
+
+## Overview
+
+Root Cause Analysis (RCA) helps you systematically investigate failures to identify underlying causes, not just symptoms. By understanding why failures occur, you can implement effective corrective actions and prevent recurrence.
+
+<Info>
+  MicroCBM's RCA module uses browser localStorage for data persistence. Records are stored locally and not synced to the backend API.
+</Info>
+
+## RCA Methodology Options
+
+Choose the investigation method that best fits your failure type:
+
+<CardGroup cols={3}>
+  <Card title="5 Whys" icon="list-ol">
+    **Linear cause chain**
+    
+    Start with a problem and ask "Why?" repeatedly to drill down to root causes. Best for simple failures with clear cause-effect relationships.
+  </Card>
+  
+  <Card title="Logic Tree" icon="sitemap">
+    **Hierarchical hypothesis testing**
+    
+    Map potential causes in a tree structure. Test each hypothesis with evidence (Confirmed/Rejected/Pending). Ideal for complex failures with multiple contributing factors.
+  </Card>
+  
+  <Card title="Fishbone (Ishikawa)" icon="diagram-project">
+    **6M categorical analysis**
+    
+    Organize causes by category: Man, Machine, Method, Material, Measurement, Environment. Useful for process-oriented investigations.
+  </Card>
+</CardGroup>
+
+## Creating an RCA
+
+<Steps>
+  <Step title="Navigate to RCA">
+    From the main menu, go to **Root Cause Analysis** and click **Create RCA**.
+  </Step>
+
+  <Step title="Enter RCA Header">
+    Fill in the investigation details:
+    
+    **Required Fields:**
+    - **Title**: Brief summary of the incident (e.g., "Gearbox failure - Unit 3 compressor")
+    - **Investigation Method**: Select 5 Whys, Logic Tree, or Fishbone
+    - **Asset**: The failed equipment
+    - **Department**: Responsible department
+    - **Event Date**: When the failure occurred
+    - **RCA Leader**: Person leading the investigation
+    - **Severity Level**: Low, Medium, High, or Critical
+    
+    **Optional Fields:**
+    - **Production Impact (hours)**: Downtime caused by failure
+    - **Estimated Cost Impact**: Financial loss or repair cost
+    - **Map Location**: Physical location or address
+    - **Groups**: Category (Operations, Safety, Quality, Other)
+    - **Notes**: Additional context
+    - **Types**: Incident, Near Miss, Audit, or Other
+    - **Tags**: Keywords for searching
+  </Step>
+
+  <Step title="Create and Open">
+    Click **Create and open** to save the RCA and begin the investigation.
+  </Step>
+</Steps>
+
+<Note>
+  An RCA ID is automatically assigned in the format `RCA-YYYY-XXXX` (e.g., RCA-2026-0001).
+</Note>
+
+## RCA Workflow Tabs
+
+Once created, each RCA uses a tabbed interface to guide you through the investigation:
+
+### 1. Evidence
+
+Gather all relevant information before analyzing:
+
+- **Evidence Items**: Document facts, observations, and data
+  - Photos of failed components
+  - Oil sample results showing abnormal trends
+  - Maintenance logs and operating conditions
+  - Witness statements from operators
+  - Sensor data or alarm logs
+
+- **Attachments**: Upload supporting files
+
+<Tip>
+  Collect evidence while it's fresh. Physical evidence may be cleaned up or repaired, making later investigation difficult.
+</Tip>
+
+### 2. Problem Statement
+
+Define the problem clearly and completely:
+
+- **Focal Point**: What failed? (e.g., "Gearbox bearing seizure")
+- **Timing**: When did it happen? Start/end dates and times
+- **Location**: Where did it occur? Map location, business unit
+- **Impact**: What were the consequences?
+  - **Actual Impact**: Production loss, safety incident, environmental release
+  - **Potential Impact**: What could have happened
+  - **Costs**: Investigation, repair, lost production
+- **Frequency**: How often does this problem occur?
+
+<Note>
+  A well-defined problem statement focuses the investigation and prevents scope creep.
+</Note>
+
+### 3. Analysis
+
+This is where you build your cause-and-effect investigation using your chosen methodology:
+
+#### 5 Whys Analysis
+
+<Steps>
+  <Step title="Start with Problem">
+    The first node represents the problem (e.g., "Gearbox bearing failed").
+  </Step>
+  
+  <Step title="Ask Why #1">
+    Add a "Why" node: "Because oil contamination exceeded limits".
+  </Step>
+  
+  <Step title="Ask Why #2">
+    Add another: "Why was oil contaminated?" → "Because filter was saturated".
+  </Step>
+  
+  <Step title="Continue to Root Cause">
+    Keep asking why until you reach a cause that, if corrected, prevents recurrence.
+    
+    Typically 3-7 levels deep. Stop when:
+    - You've identified a controllable root cause
+    - Further "whys" lead to factors outside your control
+    - Multiple whys from different branches converge
+  </Step>
+  
+  <Step title="Add Solutions">
+    At each root cause node, add corrective actions to prevent recurrence.
+  </Step>
+</Steps>
+
+#### Logic Tree Analysis
+
+<Steps>
+  <Step title="Define Problem Node">
+    Start with the problem at the top.
+  </Step>
+  
+  <Step title="Branch Hypotheses">
+    Add child nodes for possible causes:
+    - "Contamination"
+    - "Lubrication failure"
+    - "Overload"
+    - "Manufacturing defect"
+  </Step>
+  
+  <Step title="Test Each Hypothesis">
+    For each hypothesis:
+    - Add evidence (oil sample data, visual inspection, load records)
+    - Mark status: **Confirmed**, **Rejected**, or **Pending**
+    - Add supporting evidence notes
+  </Step>
+  
+  <Step title="Drill Down Confirmed Causes">
+    For confirmed causes, add sub-hypotheses and continue testing until root cause is identified.
+  </Step>
+  
+  <Step title="Document Solutions">
+    Add corrective actions at leaf nodes that are confirmed root causes.
+  </Step>
+</Steps>
+
+#### Fishbone Analysis
+
+Organize causes by the 6M categories:
+
+| Category | Examples |
+|----------|----------|
+| **Man** | Operator error, training gaps, fatigue, communication failure |
+| **Machine** | Wear, design flaw, inadequate maintenance, capacity exceedance |
+| **Method** | Incorrect procedure, missing work instruction, poor process design |
+| **Material** | Wrong lubricant, contaminated parts, substandard materials |
+| **Measurement** | Faulty sensors, calibration error, inadequate monitoring |
+| **Environment** | Temperature extremes, humidity, dust, vibration |
+
+<Steps>
+  <Step title="Draw the Backbone">
+    The problem (effect) is at the "fish head".
+  </Step>
+  
+  <Step title="Add Category Branches">
+    Six main branches represent the 6M categories.
+  </Step>
+  
+  <Step title="Identify Causes per Category">
+    For each category, add specific causes that contributed to the problem.
+  </Step>
+  
+  <Step title="Link Evidence">
+    Note which evidence supports each cause.
+  </Step>
+  
+  <Step title="Identify Root Causes">
+    Causes that appear in multiple categories or have strong evidence are likely root causes.
+  </Step>
+</Steps>
+
+### 4. Corrective Actions
+
+Document actions to prevent recurrence:
+
+- **Action Type**: Corrective, Preventive, or Systemic
+- **Description**: What will be done
+- **Owner**: Person responsible for implementation
+- **Department**: Responsible team
+- **Due Date**: Target completion
+- **Priority**: Low, Medium, High, or Critical
+- **Status**: Open, In Progress, Completed, Verified, or Overdue
+- **Verification Required**: Whether follow-up validation is needed
+- **Effectiveness Review Date**: When to check if action worked
+
+<Tip>
+  Corrective actions should address root causes, not symptoms. If your action is "Replace the bearing," ask what will prevent the bearing from failing again.
+</Tip>
+
+### 5. Final Report
+
+Summarize the investigation:
+
+- **Executive Summary**: High-level overview for management
+  - What happened
+  - What was the impact
+  - What were the root causes
+  - What actions are being taken
+  
+- **Cause and Effect Summary**: Detailed technical explanation
+  - Investigation timeline
+  - Evidence findings
+  - Root cause analysis results
+  - Corrective actions with justification
+
+<Note>
+  The final report is often shared with stakeholders who weren't involved in the investigation. Write for clarity and completeness.
+</Note>
+
+## RCA Status Workflow
+
+RCAs progress through defined statuses:
+
+1. **Draft**: Initial creation, evidence gathering
+2. **Investigation**: Active analysis and hypothesis testing
+3. **Review**: RCA complete, awaiting approval
+4. **Actions Open**: Corrective actions in progress
+5. **Verification**: Actions completed, checking effectiveness
+6. **Closed**: Investigation and actions complete
+
+Change status using the dropdown in the RCA header.
+
+## Viewing and Managing RCAs
+
+The RCA list shows:
+- **RCA ID**: Auto-generated identifier
+- **Title**: Investigation summary
+- **Status**: Current workflow stage
+- **Updated**: Last modification date
+- **Actions**: Open (view/edit) or Delete
+
+Click **Open** to view or continue working on an RCA.
+
+## Deleting RCAs
+
+<Warning>
+  Deleting an RCA removes all investigation data permanently from localStorage. This cannot be undone.
+</Warning>
+
+To delete:
+1. Click **Delete** next to the RCA in the list
+2. Confirm deletion in the browser dialog
+
+Only delete RCAs created in error. Completed investigations should be set to "Closed" status, not deleted.
+
+## Best Practices
+
+### Investigation Principles
+
+1. **Assemble a Team**: Include operators, maintenance, engineering, and management
+2. **Define Scope Early**: Clear problem statement prevents mission creep
+3. **Gather Evidence First**: Don't jump to conclusions before collecting facts
+4. **Test Hypotheses**: Don't assume causes — prove them with evidence
+5. **Look for Systemic Issues**: Individual failures often reveal process weaknesses
+6. **Focus on Prevention**: Root cause fixes prevent recurrence, not just repair
+
+### Common Pitfalls to Avoid
+
+<Warning>
+  **Stopping Too Early**: "Operator error" is rarely the root cause. Ask why the error occurred and why it wasn't prevented.
+</Warning>
+
+- **Blame Culture**: Focus on system failures, not individual fault
+- **Confirmation Bias**: Test hypotheses objectively, don't cherry-pick evidence
+- **Fixing Symptoms**: Replacing a failed component doesn't prevent future failures
+- **Incomplete Actions**: Corrective actions must be specific, measurable, and assigned
+
+### When to Use Each Method
+
+| Method | Best For | Example |
+|--------|----------|----------|
+| **5 Whys** | Simple, linear failures | Single-component failure with clear cause chain |
+| **Logic Tree** | Complex failures, multiple causes | Intermittent failures, process upsets |
+| **Fishbone** | Process problems, systemic issues | Quality defects, recurring incidents |
+
+## Example: Complete 5 Whys RCA
+
+**Problem**: Hydraulic pump bearing failed on Pump 023
+
+**5 Whys Chain**:
+1. Why did bearing fail? → **Oil contamination exceeded limits**
+2. Why was oil contaminated? → **Filter was saturated with particles**
+3. Why was filter saturated? → **Filter change interval too long**
+4. Why was interval too long? → **Scheduled based on calendar, not condition**
+5. Why not condition-based? → **No monitoring system for filter differential pressure**
+
+**Root Cause**: Lack of filter condition monitoring
+
+**Corrective Actions**:
+1. Install differential pressure gauge on filter (Owner: Maintenance Lead, Due: 2 weeks)
+2. Establish condition-based filter replacement criteria (Owner: Reliability Engineer, Due: 1 week)
+3. Train technicians on new procedure (Owner: Training Coordinator, Due: 3 weeks)
+
+## Related Features
+
+- **[Recommendations](/features/recommendations)**: Link RCA corrective actions to tracked recommendations
+- **[Alarm Monitoring](/features/alarm-monitoring)**: Use alarm trends as RCA evidence
+- **[Oil Sample Analysis](/features/oil-sample-analysis)**: Sample history provides critical evidence
+- **[Asset Management](/features/asset-management)**: Track RCA history by asset

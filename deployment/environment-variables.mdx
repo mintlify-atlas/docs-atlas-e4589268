@@ -1,0 +1,294 @@
+---
+title: Environment Variables
+description: Complete reference for all environment variables required to run MicroCBM
+---
+
+MicroCBM requires specific environment variables to be configured before deployment. These variables control API connectivity, session management, and application behavior.
+
+## Required Variables
+
+These environment variables must be set for the application to function correctly.
+
+### NEXT_PUBLIC_API_URL
+
+<ParamField path="NEXT_PUBLIC_API_URL" type="string" required>
+  The base URL of the backend REST API that MicroCBM connects to.
+</ParamField>
+
+**Example:**
+
+```bash .env.local
+NEXT_PUBLIC_API_URL=https://api.example.com
+```
+
+<Warning>
+  Variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Do not store secrets in public environment variables.
+</Warning>
+
+**Usage in Code:**
+
+The API URL is used throughout the application to make HTTP requests:
+
+```typescript
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+```
+
+### SESSION_SECRET
+
+<ParamField path="SESSION_SECRET" type="string" required>
+  A secret key used for session management and JWT token validation. Must be a strong, random string.
+</ParamField>
+
+**Example:**
+
+```bash .env.local
+SESSION_SECRET=your-secure-random-string-here
+```
+
+<Note>
+  Generate a secure random string using: `openssl rand -base64 32`
+</Note>
+
+**Security Requirements:**
+
+- Minimum 32 characters
+- Include uppercase, lowercase, numbers, and symbols
+- Never commit to version control
+- Use different values for development and production
+
+## Environment File Setup
+
+Create a `.env.local` file in the project root:
+
+```bash .env.local
+# Backend API Configuration
+NEXT_PUBLIC_API_URL=https://api.example.com
+
+# Session Management
+SESSION_SECRET=your-secure-random-string-here
+```
+
+<Warning>
+  The `.env.local` file is gitignored by default. Never commit environment files containing secrets to version control.
+</Warning>
+
+## Environment Files
+
+Next.js supports multiple environment files with different priorities:
+
+| File | Description | Priority |
+|------|-------------|----------|
+| `.env` | Default values for all environments | Lowest |
+| `.env.local` | Local overrides (gitignored) | High |
+| `.env.development` | Development environment only | Medium |
+| `.env.production` | Production environment only | Medium |
+| `.env.development.local` | Local development overrides | Highest |
+| `.env.production.local` | Local production overrides | Highest |
+
+<Note>
+  Variables in `.env.local` override all other environment files except `.env.*.local`.
+</Note>
+
+## Platform-Specific Configuration
+
+### Vercel
+
+Add environment variables in the Vercel dashboard:
+
+<Steps>
+  <Step title="Open Project Settings">
+    Navigate to your project in the Vercel dashboard and click **Settings**.
+  </Step>
+  
+  <Step title="Add Environment Variables">
+    Go to **Environment Variables** and add each variable with its value.
+  </Step>
+  
+  <Step title="Select Environments">
+    Choose which environments (Production, Preview, Development) should use each variable.
+  </Step>
+  
+  <Step title="Redeploy">
+    Trigger a new deployment to apply the changes.
+  </Step>
+</Steps>
+
+**Using Vercel CLI:**
+
+```bash
+vercel env add NEXT_PUBLIC_API_URL
+vercel env add SESSION_SECRET
+```
+
+### Netlify
+
+Configure environment variables in Netlify:
+
+<Steps>
+  <Step title="Open Site Settings">
+    Go to **Site Settings** > **Environment Variables**.
+  </Step>
+  
+  <Step title="Add Variables">
+    Click **Add a variable** and enter the key-value pairs.
+  </Step>
+  
+  <Step title="Deploy Context">
+    Select which deploy contexts (Production, Deploy Previews, Branch deploys) should use each variable.
+  </Step>
+</Steps>
+
+### Docker
+
+Pass environment variables to Docker containers:
+
+**Using .env file:**
+
+```bash
+docker run --env-file .env.local -p 3000:3000 microcbm
+```
+
+**Using -e flags:**
+
+```bash
+docker run \
+  -e NEXT_PUBLIC_API_URL=https://api.example.com \
+  -e SESSION_SECRET=your-secret \
+  -p 3000:3000 \
+  microcbm
+```
+
+**Using docker-compose:**
+
+```yaml docker-compose.yml
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+```
+
+## Development vs Production
+
+### Development Environment
+
+```bash .env.development.local
+NEXT_PUBLIC_API_URL=http://localhost:8000
+SESSION_SECRET=dev-secret-not-for-production
+```
+
+### Production Environment
+
+```bash .env.production
+NEXT_PUBLIC_API_URL=https://api.production.com
+SESSION_SECRET=strong-production-secret-from-secrets-manager
+```
+
+<Warning>
+  Never use development secrets in production. Use a secrets management service like AWS Secrets Manager, HashiCorp Vault, or your platform's built-in secrets management.
+</Warning>
+
+## Validation
+
+Verify your environment variables are loaded correctly:
+
+```typescript
+// Run this in a server component or API route
+console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+console.log("Session secret set:", !!process.env.SESSION_SECRET);
+```
+
+<Note>
+  Never log the actual value of `SESSION_SECRET` in production.
+</Note>
+
+## Backend API Requirements
+
+<Warning>
+  Without a running backend API at the URL specified in `NEXT_PUBLIC_API_URL`, authentication pages will render but data-dependent pages will show errors.
+</Warning>
+
+**Expected API Behavior:**
+
+- The backend must respond to requests at the configured URL
+- Free-tier hosting may have 30-60 second cold start times
+- The API should support JWT token authentication
+- CORS must be configured to allow requests from your frontend domain
+
+## Troubleshooting
+
+### Environment Variables Not Loading
+
+<Steps>
+  <Step title="Check File Location">
+    Ensure `.env.local` is in the project root directory.
+  </Step>
+  
+  <Step title="Restart Dev Server">
+    Environment variables are loaded at build time. Restart `npm run dev`.
+  </Step>
+  
+  <Step title="Check Variable Names">
+    Verify exact spelling and case sensitivity of variable names.
+  </Step>
+  
+  <Step title="Verify Public Prefix">
+    Client-side variables must start with `NEXT_PUBLIC_`.
+  </Step>
+</Steps>
+
+### API Connection Fails
+
+1. Verify `NEXT_PUBLIC_API_URL` is set correctly
+2. Check that the API is running and accessible
+3. Ensure CORS is configured on the backend
+4. Check for firewall or network restrictions
+5. Allow 30-60 seconds for free-tier API cold starts
+
+### Session Issues
+
+1. Verify `SESSION_SECRET` is set and matches across deployments
+2. Ensure the secret is at least 32 characters
+3. Check that cookies are enabled in the browser
+4. Verify the domain and secure settings for production
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Secrets Management" icon="lock">
+    Store sensitive values in your platform's secrets manager, not in environment files.
+  </Card>
+  
+  <Card title="Rotate Secrets Regularly" icon="rotate">
+    Change `SESSION_SECRET` periodically and immediately if compromised.
+  </Card>
+  
+  <Card title="Separate Environments" icon="copy">
+    Use different values for development, staging, and production.
+  </Card>
+  
+  <Card title="Audit Access" icon="eye">
+    Limit who can view and modify production environment variables.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Deployment Overview" icon="rocket" href="/deployment/overview">
+    Learn about deployment platforms and strategies
+  </Card>
+  <Card title="Security" icon="shield" href="/deployment/security">
+    Configure security headers and middleware
+  </Card>
+</CardGroup>

@@ -1,0 +1,333 @@
+---
+title: useUrlState
+description: Synchronize component state with URL search parameters for shareable links and navigation
+---
+
+The `useUrlState` hook synchronizes component state with URL query parameters using Next.js navigation. It enables shareable links, preserves filter states across page refreshes, and maintains component state in the browser's navigation history.
+
+## Import
+
+```typescript
+import { useUrlState } from "@/hooks";
+```
+
+## Signature
+
+```typescript
+function useUrlState(
+  key: string,
+  defaultValue?: string
+): readonly [string, (newValue: string) => void]
+```
+
+## Parameters
+
+<ParamField path="key" type="string" required>
+  The URL query parameter key to synchronize with. This becomes the parameter name in the URL (e.g., `"severity"` → `?severity=critical`).
+</ParamField>
+
+<ParamField path="defaultValue" type="string" default="">
+  The default value when the URL parameter is not present.
+</ParamField>
+
+## Return Value
+
+Returns a tuple similar to React's `useState`:
+
+<ResponseField name="value" type="string">
+  The current value from the URL query parameter, or `defaultValue` if not present.
+</ResponseField>
+
+<ResponseField name="setValue" type="(newValue: string) => void">
+  Function to update the URL parameter. Pass an empty string to remove the parameter from the URL.
+</ResponseField>
+
+## Usage Examples
+
+### Basic Filter State
+
+Sync a filter dropdown with the URL:
+
+```tsx
+import { useUrlState } from "@/hooks";
+
+function AssetFilters() {
+  const [severity, setSeverity] = useUrlState("criticality_level", "");
+  const [siteId, setSiteId] = useUrlState("site_id", "");
+
+  return (
+    <div>
+      <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+      </select>
+
+      <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
+        <option value="">All Sites</option>
+        {sites.map((site) => (
+          <option key={site.id} value={site.id}>
+            {site.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+```
+
+URL result: `/assets?criticality_level=critical&site_id=123`
+
+### Tab Navigation
+
+Persist active tab in the URL:
+
+```tsx
+import { useUrlState } from "@/hooks";
+
+function TabsContent() {
+  const [tab, setTab] = useUrlState("tab", "roles");
+
+  return (
+    <div>
+      <div className="tabs">
+        <button
+          className={tab === "roles" ? "active" : ""}
+          onClick={() => setTab("roles")}
+        >
+          Roles
+        </button>
+        <button
+          className={tab === "permissions" ? "active" : ""}
+          onClick={() => setTab("permissions")}
+        >
+          Permissions
+        </button>
+      </div>
+
+      <div className="content">
+        {tab === "roles" && <RolesContent />}
+        {tab === "permissions" && <PermissionsContent />}
+      </div>
+    </div>
+  );
+}
+```
+
+URL result: `/settings?tab=permissions`
+
+### Multiple Filters (Real-World Example)
+
+From the MicroCBM recommendation filters:
+
+```tsx
+import { useUrlState } from "@/hooks";
+
+function RecommendationFilters({ sites, assets, samplingPoints, users }) {
+  const [searchSeverity, setSearchSeverity] = useUrlState("severity", "");
+  const [site_id, setSearchSiteId] = useUrlState("site_id", "");
+  const [asset_id, setSearchAssetId] = useUrlState("asset_id", "");
+  const [sampling_point_id, setSearchSamplingPointId] = useUrlState(
+    "sampling_point_id",
+    ""
+  );
+  const [recommender_id, setSearchRecommenderId] = useUrlState(
+    "recommender_id",
+    ""
+  );
+
+  const clearFilters = () => {
+    setSearchSeverity("");
+    setSearchSiteId("");
+    setSearchAssetId("");
+    setSearchSamplingPointId("");
+    setSearchRecommenderId("");
+  };
+
+  return (
+    <div>
+      {/* Filter dropdowns */}
+      <button onClick={clearFilters}>Clear All Filters</button>
+    </div>
+  );
+}
+```
+
+URL result: `/recommendations?severity=critical&site_id=123&asset_id=456`
+
+### Search with Modal State
+
+Combine search and modal selection:
+
+```tsx
+import { useUrlState } from "@/hooks";
+
+function RoleCards() {
+  const [searchName, setSearchName] = useUrlState("name", "");
+  const [, setRoleId] = useUrlState("roleId", "");
+
+  const handleRoleClick = (roleId: string) => {
+    setRoleId(roleId); // Opens modal with role details
+  };
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={searchName}
+        onChange={(e) => setSearchName(e.target.value)}
+        placeholder="Search roles..."
+      />
+      {roles
+        .filter((role) => role.name.includes(searchName))
+        .map((role) => (
+          <RoleCard key={role.id} onClick={() => handleRoleClick(role.id)} />
+        ))}
+    </div>
+  );
+}
+```
+
+### Pagination
+
+Manage page number in the URL:
+
+```tsx
+import { useUrlState } from "@/hooks";
+
+function PaginatedTable() {
+  const [page, setPage] = useUrlState("page", "1");
+  const currentPage = parseInt(page) || 1;
+
+  return (
+    <div>
+      <Table data={getData(currentPage)} />
+      <Pagination
+        current={currentPage}
+        onChange={(newPage) => setPage(String(newPage))}
+      />
+    </div>
+  );
+}
+```
+
+URL result: `/data?page=3`
+
+### Clearing URL Parameters
+
+Pass an empty string to remove a parameter:
+
+```tsx
+import { useUrlState } from "@/hooks";
+
+function FilterPanel() {
+  const [filter, setFilter] = useUrlState("filter", "");
+
+  return (
+    <div>
+      <input
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+      />
+      <button onClick={() => setFilter("")}>Clear Filter</button>
+    </div>
+  );
+}
+```
+
+## Behavior
+
+### URL Updates
+
+Calling `setValue` updates the URL using `router.replace()`, which:
+- Updates the URL without creating a new history entry
+- Preserves other query parameters
+- Does not trigger a page refresh
+- Does not scroll the page (`{ scroll: false }`)
+
+### Parameter Management
+
+- **Setting a value**: `setValue("newValue")` → URL contains `?key=newValue`
+- **Clearing a value**: `setValue("")` → Removes the parameter from the URL
+- **Other parameters**: Existing query parameters are preserved
+
+### Initial Value
+
+The hook reads the current URL parameter on mount and uses `defaultValue` if the parameter is absent.
+
+## Benefits
+
+<CardGroup cols={2}>
+  <Card title="Shareable Links" icon="share">
+    Users can copy and share URLs with active filters and state
+  </Card>
+  
+  <Card title="Browser Navigation" icon="arrow-left">
+    Back/forward buttons work correctly with state changes
+  </Card>
+  
+  <Card title="Persistent State" icon="floppy-disk">
+    State survives page refreshes and external link navigation
+  </Card>
+  
+  <Card title="Clean API" icon="code">
+    Simple API identical to React's `useState`
+  </Card>
+</CardGroup>
+
+## Notes
+
+<Note>
+  This hook uses `router.replace()` instead of `router.push()`, so URL changes don't create new history entries. Each state change updates the current history entry.
+</Note>
+
+<Warning>
+  Values are always strings. Convert to numbers or booleans as needed:
+  ```tsx
+  const [page, setPage] = useUrlState("page", "1");
+  const pageNumber = parseInt(page) || 1;
+  ```
+</Warning>
+
+<Note>
+  This hook requires Next.js App Router and the `"use client"` directive. It relies on `useRouter`, `usePathname`, and `useSearchParams` from `next/navigation`.
+</Note>
+
+## Common Patterns
+
+### Multiple Filters with Reset
+
+```tsx
+const [filter1, setFilter1] = useUrlState("f1", "");
+const [filter2, setFilter2] = useUrlState("f2", "");
+const [filter3, setFilter3] = useUrlState("f3", "");
+
+const resetAll = () => {
+  setFilter1("");
+  setFilter2("");
+  setFilter3("");
+};
+```
+
+### Numeric Values
+
+```tsx
+const [pageStr, setPageStr] = useUrlState("page", "1");
+const page = parseInt(pageStr) || 1;
+const setPage = (num: number) => setPageStr(String(num));
+```
+
+### Boolean Flags
+
+```tsx
+const [showArchived, setShowArchived] = useUrlState("archived", "");
+const isArchived = showArchived === "true";
+const toggleArchived = () => setShowArchived(isArchived ? "" : "true");
+```
+
+## Related
+
+- [useDebouncedState](/api/hooks/use-debounced-state) - Debounce URL updates for search inputs
+- [Routing Guide](/development/routing) - Next.js App Router navigation patterns
+- [Filter Components](/components/ui-components) - Pre-built filter components

@@ -1,0 +1,679 @@
+---
+title: Sample Management Actions
+description: Server Actions for oil sample analysis and tracking
+---
+
+## Overview
+
+Sample management actions handle oil sample CRUD operations, analysis group analytics, and sample history tracking. All functions are located in `src/app/actions/samples.ts`.
+
+## Sample Operations
+
+### getSamplesService
+
+Retrieves a paginated list of oil samples with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="search" type="string" optional>
+    Search term for filtering samples
+  </ParamField>
+  
+  <ParamField path="site_id" type="string" optional>
+    Filter by site ID
+  </ParamField>
+  
+  <ParamField path="asset_id" type="string" optional>
+    Filter by asset ID
+  </ParamField>
+  
+  <ParamField path="sampling_point_id" type="string" optional>
+    Filter by sampling point ID
+  </ParamField>
+  
+  <ParamField path="lab_name" type="string" optional>
+    Filter by laboratory name
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="Sample[]">
+  Array of sample objects
+</ResponseField>
+
+<ResponseField name="meta" type="SamplesMeta">
+  Pagination metadata
+  
+  <ResponseField name="page" type="number">
+    Current page number
+  </ResponseField>
+  
+  <ResponseField name="limit" type="number">
+    Items per page
+  </ResponseField>
+  
+  <ResponseField name="total" type="number">
+    Total number of samples
+  </ResponseField>
+  
+  <ResponseField name="total_pages" type="number">
+    Total number of pages
+  </ResponseField>
+  
+  <ResponseField name="has_next" type="boolean">
+    Whether there is a next page
+  </ResponseField>
+  
+  <ResponseField name="has_prev" type="boolean">
+    Whether there is a previous page
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+"use server";
+import { getSamplesService } from "@/app/actions";
+
+export default async function SamplesPage({ searchParams }) {
+  const params = await searchParams;
+  const page = parseInt(String(params?.page ?? 1), 10);
+  const limit = parseInt(String(params?.limit ?? 10), 10);
+
+  const { data: samples, meta } = await getSamplesService({ 
+    page, 
+    limit 
+  });
+
+  return <SampleTable data={samples} meta={meta} />;
+}
+```
+
+```typescript Filter by Asset
+import { getSamplesService } from "@/app/actions";
+
+// Get all samples for a specific asset
+const { data: samples } = await getSamplesService({
+  asset_id: "asset-123",
+  page: 1,
+  limit: 50,
+});
+```
+
+```typescript Filter by Lab and Site
+import { getSamplesService } from "@/app/actions";
+
+const { data: samples } = await getSamplesService({
+  site_id: "site-456",
+  lab_name: "LabCorp",
+  page: 1,
+  limit: 20,
+});
+```
+
+```typescript Client Component
+"use client";
+import { getSamplesService } from "@/app/actions";
+import { useEffect, useState } from "react";
+
+export function SampleList() {
+  const [samples, setSamples] = useState([]);
+
+  useEffect(() => {
+    getSamplesService()
+      .then((r) => setSamples(r.data))
+      .catch(() => []);
+  }, []);
+
+  return <div>{samples.map(s => <SampleCard key={s.id} sample={s} />)}</div>;
+}
+```
+
+</CodeGroup>
+
+<Note>
+This function throws on error, so wrap in try-catch when needed.
+</Note>
+
+---
+
+### getSampleService
+
+Retrieves a single sample by ID.
+
+<ParamField path="id" type="string" required>
+  Unique sample identifier
+</ParamField>
+
+<ResponseField name="data" type="Sample">
+  Complete sample object with wear metals, contaminants, particle counts, and viscosity levels
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getSampleService } from "@/app/actions";
+
+const sample = await getSampleService("sample-123");
+
+console.log(sample.serial_number);
+console.log(sample.severity);
+console.log(sample.wear_metals);
+console.log(sample.contaminants);
+```
+
+```typescript With Error Handling
+import { getSampleService } from "@/app/actions";
+
+try {
+  const sample = await getSampleService(sampleId);
+  return <SampleDetails sample={sample} />;
+} catch (error) {
+  console.error("Error fetching sample:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### addSampleService
+
+Creates a new oil sample with analysis data.
+
+<ParamField path="payload" type="AddSamplePayload" required>
+  Sample creation data
+  
+  <ParamField path="site" type="object" required>
+    <ParamField path="id" type="string" required>
+      Site ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="asset" type="object" required>
+    <ParamField path="id" type="string" required>
+      Asset ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="sampling_point" type="object" required>
+    <ParamField path="id" type="string" required>
+      Sampling point ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="serial_number" type="string" required>
+    Sample serial number
+  </ParamField>
+  
+  <ParamField path="date_sampled" type="number" required>
+    Sample date as Unix timestamp
+  </ParamField>
+  
+  <ParamField path="lab_name" type="string" required>
+    Laboratory name
+  </ParamField>
+  
+  <ParamField path="service_meter_reading" type="string" required>
+    Service meter reading
+  </ParamField>
+  
+  <ParamField path="hrs" type="string" required>
+    Operating hours
+  </ParamField>
+  
+  <ParamField path="oil_in_service" type="string" required>
+    Oil in service hours/days
+  </ParamField>
+  
+  <ParamField path="filter_changed" type="string" required>
+    Filter change status (e.g., "Yes", "No")
+  </ParamField>
+  
+  <ParamField path="oil_drained" type="string" required>
+    Oil drained status
+  </ParamField>
+  
+  <ParamField path="severity" type="string" required>
+    Severity level (e.g., "Normal", "Warning", "Critical")
+  </ParamField>
+  
+  <ParamField path="wear_metals" type="Record<string, string>" optional>
+    Wear metal measurements (key: element, value: concentration)
+  </ParamField>
+  
+  <ParamField path="contaminants" type="Contaminant[]" optional>
+    Array of contaminant measurements
+    
+    <ParamField path="type" type="string" required>
+      Contaminant type
+    </ParamField>
+    
+    <ParamField path="value" type="number" required>
+      Measured value
+    </ParamField>
+    
+    <ParamField path="unit" type="string" required>
+      Unit of measurement
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="particle_counts" type="ParticleCount[]" optional>
+    Particle count measurements
+    
+    <ParamField path="size_range" type="string" required>
+      Particle size range (e.g., ">4μm", ">6μm")
+    </ParamField>
+    
+    <ParamField path="count" type="number" required>
+      Particle count
+    </ParamField>
+    
+    <ParamField path="unit" type="string" required>
+      Unit (e.g., "particles/mL")
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="viscosity_levels" type="ViscosityLevel[]" optional>
+    Viscosity measurements at different temperatures
+    
+    <ParamField path="temperature" type="number" required>
+      Temperature in Celsius
+    </ParamField>
+    
+    <ParamField path="viscosity" type="number" required>
+      Viscosity value
+    </ParamField>
+    
+    <ParamField path="unit" type="string" required>
+      Unit (e.g., "cSt", "mm²/s")
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="additives" type="Record<string, string> | Additive[]" optional>
+    Additive measurements
+  </ParamField>
+  
+  <ParamField path="collection_date" type="string" optional>
+    Collection date (ISO string)
+  </ParamField>
+  
+  <ParamField path="document_url" type="string" optional>
+    URL to lab report document
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created sample data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addSampleService } from "@/app/actions";
+import { AddSamplePayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddSampleForm() {
+  const handleSubmit = async (data: AddSamplePayload) => {
+    const payload: AddSamplePayload = {
+      site: { id: data.site.id },
+      asset: { id: data.asset.id },
+      sampling_point: { id: data.sampling_point.id },
+      serial_number: data.serial_number,
+      date_sampled: new Date(data.date_sampled).getTime(),
+      lab_name: data.lab_name,
+      service_meter_reading: data.service_meter_reading,
+      hrs: data.hrs,
+      oil_in_service: data.oil_in_service,
+      filter_changed: data.filter_changed,
+      oil_drained: data.oil_drained,
+      severity: data.severity,
+      wear_metals: {
+        Iron: "25",
+        Copper: "12",
+        Chrome: "5",
+      },
+      contaminants: [
+        { type: "Water", value: 150, unit: "ppm" },
+        { type: "Fuel", value: 2.5, unit: "%" },
+      ],
+      particle_counts: [
+        { size_range: ">4μm", count: 5000, unit: "particles/mL" },
+        { size_range: ">6μm", count: 2500, unit: "particles/mL" },
+      ],
+    };
+
+    const response = await addSampleService(payload);
+    
+    if (response.success) {
+      toast.success("Sample added successfully");
+      router.push("/samples");
+    } else {
+      toast.error(response.message || "Failed to add sample");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript With Document Upload
+import { addSampleService, uploadImage } from "@/app/actions";
+
+const handleSubmit = async (data: AddSamplePayload) => {
+  let documentUrl;
+  
+  // Upload lab report document
+  if (reportFile) {
+    const uploadResponse = await uploadImage(reportFile);
+    if (uploadResponse.success) {
+      documentUrl = uploadResponse.data.file_key;
+    }
+  }
+
+  const payload = {
+    ...data,
+    document_url: documentUrl,
+  };
+
+  const response = await addSampleService(payload);
+  
+  if (response.success) {
+    toast.success("Sample with report added successfully");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### editSampleService
+
+Updates an existing sample.
+
+<ParamField path="id" type="string" required>
+  Sample ID to update
+</ParamField>
+
+<ParamField path="payload" type="EditSamplePayload" required>
+  Updated sample data (same structure as AddSamplePayload)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editSampleService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleUpdate = async (sampleId: string, data: EditSamplePayload) => {
+  const response = await editSampleService(sampleId, data);
+  
+  if (response.success) {
+    toast.success("Sample updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteSampleService
+
+Deletes a sample.
+
+<ParamField path="id" type="string" required>
+  Sample ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteSampleService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (sampleId: string) => {
+  const response = await deleteSampleService(sampleId);
+  
+  if (response.success) {
+    toast.success("Sample deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+## Analytics Operations
+
+### getSampleAnalysisGroupsAnalyticsService
+
+Retrieves analytics for sample analysis groups (wear metals, contaminants, etc.).
+
+<ParamField path="category" type="string" required>
+  Analysis category (e.g., "wear_metals", "contaminants", "particle_counts")
+</ParamField>
+
+<ParamField path="period" type="number" optional>
+  Time period in days for trend analysis
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Response with analytics data
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="data" type="object">
+    Analytics data for the specified category
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getSampleAnalysisGroupsAnalyticsService } from "@/app/actions";
+
+const response = await getSampleAnalysisGroupsAnalyticsService(
+  "wear_metals",
+  30
+);
+
+if (response.success) {
+  console.log("Wear metals trends:", response.data);
+}
+```
+
+```typescript Multiple Categories
+import { getSampleAnalysisGroupsAnalyticsService } from "@/app/actions";
+
+const [wearMetals, contaminants] = await Promise.all([
+  getSampleAnalysisGroupsAnalyticsService("wear_metals", 30),
+  getSampleAnalysisGroupsAnalyticsService("contaminants", 30),
+]);
+```
+
+</CodeGroup>
+
+---
+
+## Sample History Operations
+
+### getSamplingPointSampleHistoryService
+
+Retrieves sample history for a specific sampling point with filtering and pagination.
+
+<ParamField path="samplingPointId" type="string" required>
+  Sampling point ID
+</ParamField>
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering
+  
+  <ParamField path="page" type="number" optional>
+    Page number
+  </ParamField>
+  
+  <ParamField path="org_id" type="string" optional>
+    Organization ID filter
+  </ParamField>
+  
+  <ParamField path="site_id" type="string" optional>
+    Site ID filter
+  </ParamField>
+  
+  <ParamField path="asset_id" type="string" optional>
+    Asset ID filter
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page
+  </ParamField>
+  
+  <ParamField path="start_date" type="string" optional>
+    Start date for date range filter
+  </ParamField>
+  
+  <ParamField path="end_date" type="string" optional>
+    End date for date range filter
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="SampleHistoryResponse">
+  Sample history response
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="data" type="Sample[]">
+    Array of sample objects
+  </ResponseField>
+  
+  <ResponseField name="meta" type="SampleHistoryMeta">
+    Pagination metadata
+  </ResponseField>
+  
+  <ResponseField name="message" type="string" optional>
+    Error message if applicable
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getSamplingPointSampleHistoryService } from "@/app/actions";
+
+const { success, data: samples, meta } = 
+  await getSamplingPointSampleHistoryService("sampling-point-123", {
+    page: 1,
+    limit: 20,
+  });
+
+if (success) {
+  console.log(`Found ${meta.total} historical samples`);
+}
+```
+
+```typescript Date Range Filter
+import { getSamplingPointSampleHistoryService } from "@/app/actions";
+
+const { data: samples } = 
+  await getSamplingPointSampleHistoryService("sampling-point-123", {
+    start_date: "2024-01-01",
+    end_date: "2024-12-31",
+    asset_id: "asset-456",
+  });
+```
+
+```typescript Server Component
+"use server";
+import { getSamplingPointSampleHistoryService } from "@/app/actions";
+
+export default async function SampleHistoryPage({ params }) {
+  const { samplingPointId } = await params;
+  
+  const { success, data: samples, meta } = 
+    await getSamplingPointSampleHistoryService(samplingPointId);
+
+  if (!success) {
+    return <div>Unable to load sample history</div>;
+  }
+
+  return <SampleHistoryChart samples={samples} />;
+}
+```
+
+</CodeGroup>
+
+<Note>
+This function returns a success flag instead of throwing, making it safe to use without try-catch.
+</Note>
+
+## Type Definitions
+
+Import types from `@/types` and schemas from `@/schema`:
+
+```typescript
+import { 
+  Sample, 
+  WearMetal, 
+  Contaminant, 
+  ParticleCount, 
+  ViscosityLevel 
+} from "@/types";
+import { 
+  AddSamplePayload, 
+  EditSamplePayload, 
+  ADD_SAMPLE_SCHEMA 
+} from "@/schema";
+import { ApiResponse } from "@/app/actions";
+import { 
+  SampleHistoryResponse, 
+  SampleHistoryMeta 
+} from "@/app/actions/samples";
+```
+
+## Related Actions
+
+- [Asset Actions](/api/actions/assets) - Asset management for samples
+- [Alarm Actions](/api/actions/alarms) - Alarms triggered by sample analysis
+- [Type Definitions](/api/types/samples) - Sample type definitions

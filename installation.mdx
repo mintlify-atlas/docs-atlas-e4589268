@@ -1,0 +1,551 @@
+---
+title: Installation
+description: Complete guide to installing, configuring, and deploying MicroCBM in development and production environments.
+---
+
+This guide provides detailed instructions for setting up MicroCBM, including environment configuration, security setup, and deployment options.
+
+## System Requirements
+
+### Minimum Requirements
+
+- **Node.js**: 20.x or higher
+- **npm**: 10.x or higher (or equivalent package manager)
+- **Memory**: 2GB RAM minimum (4GB recommended)
+- **Disk Space**: 500MB for dependencies and build artifacts
+- **Browser**: Modern browser with JavaScript enabled (Chrome, Firefox, Safari, Edge)
+
+### Supported Package Managers
+
+MicroCBM works with any of these package managers:
+
+<CodeGroup>
+```bash npm
+npm install
+```
+
+```bash yarn
+yarn install
+```
+
+```bash pnpm
+pnpm install
+```
+
+```bash bun
+bun install
+```
+</CodeGroup>
+
+## Installation Steps
+
+### 1. Get the Source Code
+
+Clone the repository or download the source:
+
+```bash
+git clone <repository-url>
+cd microcbm
+```
+
+### 2. Install Dependencies
+
+Install all required packages:
+
+```bash
+npm install
+```
+
+This installs the following key dependencies from `package.json`:
+
+#### Core Framework
+- `next@15.5.9` - Next.js framework with App Router
+- `react@19.1.0` - React library
+- `typescript@^5` - TypeScript language support
+
+#### UI Components & Styling
+- `@radix-ui/*` - Accessible UI primitives (Dialog, Select, Dropdown, etc.)
+- `tailwindcss@^4` - Utility-first CSS framework
+- `sass@^1.93.2` - SCSS preprocessor
+- `framer-motion@^12.23.24` - Animation library
+- `@iconify/react@^6.0.2` - Icon system
+
+#### Forms & Validation
+- `react-hook-form@^7.64.0` - Form state management
+- `zod@^4.1.11` - Schema validation
+- `@hookform/resolvers@^5.2.2` - Form validation integration
+
+#### Data & State Management
+- `@tanstack/react-query@^5.90.2` - Server state management
+- `@tanstack/react-table@^8.21.3` - Table management
+- `zustand@^5.0.9` - Client state management
+- `axios@^1.12.2` - HTTP client
+
+#### Visualization & Diagramming
+- `recharts@^3.2.1` - Chart library
+- `@xyflow/react@^12.10.1` - Flow diagrams (for RCA)
+
+#### Authentication & Security
+- `jose@^6.1.0` - JWT handling
+- `validator@^13.15.23` - Input validation
+
+### 3. Environment Configuration
+
+<Warning>
+  Never commit `.env.local` or any file containing secrets to version control. Add these files to `.gitignore`.
+</Warning>
+
+Create a `.env.local` file in the root directory:
+
+```bash .env.local
+# Required: Backend API URL
+NEXT_PUBLIC_API_URL=https://your-backend-api.com
+
+# Required: Session encryption secret
+SESSION_SECRET=your-random-secret-key-min-32-chars
+```
+
+#### Environment Variables Reference
+
+<AccordionGroup>
+  <Accordion title="NEXT_PUBLIC_API_URL (Required)">
+    **Type**: String  
+    **Description**: Base URL for the backend REST API
+
+    This variable is used in server actions to make API requests:
+
+    ```typescript src/app/actions/helpers.ts
+    export async function requestWithAuth(
+      input: RequestInfo,
+      init?: RequestInit,
+    ): Promise<Response> {
+      const token = (await cookies()).get("token")?.value;
+      const headers = new Headers(init?.headers || {});
+      headers.set("Content-Type", "application/json");
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      const requestInit: RequestInit = { ...init, headers };
+      const url = `${process.env.NEXT_PUBLIC_API_URL}${input}`;
+
+      return fetch(url, requestInit);
+    }
+    ```
+
+    **Example values**:
+    - Development: `http://localhost:8000`
+    - Production: `https://api.yourdomain.com`
+    - Staging: `https://api-staging.yourdomain.com`
+
+    <Note>
+      The `NEXT_PUBLIC_` prefix makes this variable available to client-side code. Do not include sensitive data in this URL.
+    </Note>
+  </Accordion>
+
+  <Accordion title="SESSION_SECRET (Required)">
+    **Type**: String  
+    **Description**: Secret key used for JWT session encryption and validation
+
+    Used in `src/libs/jwt.ts` and `src/libs/session.ts` for session management:
+
+    ```typescript
+    // Session creation uses this secret
+    await createUserSession(token);
+    ```
+
+    **Requirements**:
+    - Minimum 32 characters
+    - Use a cryptographically secure random string
+    - Keep it secret and never expose in client code
+
+    **Generate a secure secret**:
+
+    <CodeGroup>
+    ```bash Node.js
+    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+    ```
+
+    ```bash OpenSSL
+    openssl rand -hex 32
+    ```
+
+    ```bash Python
+    python -c "import secrets; print(secrets.token_hex(32))"
+    ```
+    </CodeGroup>
+  </Accordion>
+</AccordionGroup>
+
+### 4. Verify Configuration
+
+Check that your setup is correct:
+
+```bash
+# Verify Node.js version
+node --version  # Should be 20.x or higher
+
+# Verify npm version
+npm --version   # Should be 10.x or higher
+
+# Check environment variables are loaded
+node -e "console.log(process.env.NEXT_PUBLIC_API_URL || 'Not set')"
+```
+
+## Running the Application
+
+### Development Mode
+
+Start the development server with hot reloading:
+
+```bash
+npm run dev
+```
+
+The application runs on `http://localhost:3000` by default.
+
+**Development server features**:
+- Hot module replacement (HMR)
+- Fast Refresh for instant updates
+- Detailed error messages and stack traces
+- Source maps for debugging
+
+<Note>
+  The first request after starting may take 30-60 seconds if the backend API is on a free-tier service with cold starts.
+</Note>
+
+### Production Build
+
+Build and run the optimized production version:
+
+```bash
+# Create production build
+npm run build
+
+# Start production server
+npm run start
+```
+
+The build process:
+1. Compiles TypeScript to JavaScript
+2. Optimizes and minifies code
+3. Generates static pages where possible
+4. Creates optimized CSS bundles
+5. Processes and optimizes images
+
+**Expected build output**:
+```bash
+▲ Next.js 15.5.9
+
+Creating an optimized production build ...
+✓ Compiled successfully
+✓ Linting and checking validity of types
+✓ Collecting page data
+✓ Generating static pages (15/15)
+✓ Finalizing page optimization
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    5.2 kB         120 kB
+├ ○ /alarms                              8.4 kB         125 kB
+├ ○ /assets                              9.1 kB         128 kB
+└ ...
+```
+
+<Warning>
+  You may see warnings about dynamic routes using `cookies` during static generation. These are expected and do not affect functionality.
+</Warning>
+
+## Security Configuration
+
+### Security Headers
+
+MicroCBM implements security best practices in `next.config.ts`:
+
+```typescript next.config.ts
+const securityHeaders = [
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+];
+
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/(.*)", headers: securityHeaders }];
+  },
+};
+```
+
+**Security headers explained**:
+- `X-Content-Type-Options: nosniff` - Prevents MIME type sniffing
+- `X-Frame-Options: SAMEORIGIN` - Prevents clickjacking attacks
+- `Referrer-Policy` - Controls referrer information
+- `Permissions-Policy` - Disables unnecessary browser features
+- `poweredByHeader: false` - Removes X-Powered-By header
+
+### Middleware Protection
+
+All routes except authentication pages are protected by middleware in `src/middleware.ts`:
+
+```typescript src/middleware.ts
+const publicPaths = new Set([
+  ROUTES.AUTH.LOGIN,
+  ROUTES.AUTH.REGISTER,
+  ROUTES.AUTH.RESET_PASSWORD,
+]);
+
+function isPublicPath(pathname: string): boolean {
+  return publicPaths.has(pathname) || pathname.startsWith("/auth/");
+}
+
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get("token")?.value;
+  const isPublic = isPublicPath(pathname);
+
+  if (token && isTokenExpired(token)) {
+    const response = isPublic
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+    response.cookies.delete("token");
+    response.cookies.delete("userData");
+    return response;
+  }
+
+  if (!isPublic && !token) {
+    return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+  }
+
+  if (isPublic && token) {
+    return NextResponse.redirect(new URL(ROUTES.HOME, req.nextUrl));
+  }
+
+  return NextResponse.next();
+}
+```
+
+**Middleware functionality**:
+- Checks for valid JWT token on protected routes
+- Redirects unauthenticated users to login
+- Redirects authenticated users away from auth pages
+- Validates token expiration and clears expired sessions
+- Excludes static assets, API routes, and public files
+
+### Authentication Flow
+
+MicroCBM uses a two-step authentication process:
+
+<Steps>
+  <Step title="Login with credentials">
+    User submits email and password:
+
+    ```typescript src/app/actions/auth.ts
+    export async function loginService(payload: {
+      email: string;
+      password: string;
+    }): Promise<ApiResponse> {
+      return handleApiRequest(`${commonEndpoint}/login`, payload);
+    }
+    ```
+  </Step>
+
+  <Step title="OTP verification">
+    Backend sends a 6-digit OTP to user's email. User enters OTP:
+
+    ```typescript src/app/actions/auth.ts
+    export async function verifyOTPService(formData: {
+      email: string;
+      otp: string;
+    }): Promise<ApiResponse> {
+      const response = await handleApiRequest(`${commonEndpoint}/verify-otp`, {
+        email: formData.email,
+        otp: formData.otp,
+      });
+
+      if (response?.success) {
+        const token =
+          response.data?.data?.token ||
+          response.data?.data?.access_token ||
+          response.data?.token ||
+          response.data?.access_token;
+
+        if (token && typeof token === "string") {
+          await createUserSession(token);
+        }
+      }
+
+      return response;
+    }
+    ```
+  </Step>
+
+  <Step title="Session creation">
+    Upon successful OTP verification, a JWT token is stored in an HTTP-only cookie and the user is redirected to the dashboard.
+  </Step>
+</Steps>
+
+<Note>
+  OTP verification is required for all logins. Ensure your email service is configured correctly in the backend API.
+</Note>
+
+## TypeScript Configuration
+
+MicroCBM uses strict TypeScript settings defined in `tsconfig.json`:
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+**Key settings**:
+- `strict: true` - Enables all strict type checking
+- `@/*` path alias - Import from `src/` using `@/` prefix
+- `target: ES2017` - Compiles to ES2017 for broad compatibility
+
+## Deployment
+
+### Vercel (Recommended)
+
+Deploy to Vercel in one click:
+
+<Steps>
+  <Step title="Connect repository">
+    Import your Git repository in the Vercel dashboard
+  </Step>
+
+  <Step title="Configure environment variables">
+    Add `NEXT_PUBLIC_API_URL` and `SESSION_SECRET` in project settings
+  </Step>
+
+  <Step title="Deploy">
+    Vercel automatically builds and deploys on every push to main
+  </Step>
+</Steps>
+
+### Docker
+
+Create a `Dockerfile` for containerized deployment:
+
+```dockerfile Dockerfile
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV production
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+ENV PORT 3000
+
+CMD ["node", "server.js"]
+```
+
+Build and run:
+
+```bash
+docker build -t microcbm .
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_API_URL=https://api.example.com \
+  -e SESSION_SECRET=your-secret \
+  microcbm
+```
+
+### Other Platforms
+
+MicroCBM can be deployed to:
+- **Netlify**: Use the Netlify CLI or Git integration
+- **AWS**: Deploy to EC2, ECS, or Amplify
+- **Google Cloud**: Use Cloud Run or App Engine
+- **Azure**: Deploy to App Service
+
+<Note>
+  For production deployments, always use `npm run build` and `npm run start` rather than `npm run dev`.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Module not found errors">
+    **Solution**: Clear cache and reinstall
+    ```bash
+    rm -rf node_modules .next
+    npm install
+    npm run dev
+    ```
+  </Accordion>
+
+  <Accordion title="Port 3000 already in use">
+    **Solution**: Use a different port
+    ```bash
+    PORT=3001 npm run dev
+    ```
+  </Accordion>
+
+  <Accordion title="API connection refused">
+    **Solution**: 
+    - Verify `NEXT_PUBLIC_API_URL` is correct
+    - Check backend API is running
+    - Ensure no CORS issues (check browser console)
+  </Accordion>
+
+  <Accordion title="Build fails with TypeScript errors">
+    **Solution**: 
+    ```bash
+    # Check for type errors
+    npx tsc --noEmit
+    
+    # Fix or temporarily skip
+    npm run build -- --no-lint
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Development Guide" icon="code" href="/development/project-structure">
+    Learn about the project structure and start developing
+  </Card>
+  <Card title="Environment Variables" icon="gear" href="/deployment/environment-variables">
+    Complete reference for all configuration options
+  </Card>
+  <Card title="Security Best Practices" icon="shield" href="/deployment/security">
+    Harden your production deployment
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/actions/overview">
+    Explore Server Actions and type definitions
+  </Card>
+</CardGroup>

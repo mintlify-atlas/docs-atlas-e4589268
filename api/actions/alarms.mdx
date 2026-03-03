@@ -1,0 +1,629 @@
+---
+title: Alarm Management Actions
+description: Server Actions for monitoring and managing system alarms
+---
+
+## Overview
+
+Alarm management actions provide CRUD operations for alarms, analytics, and acknowledgment workflows. All functions are located in `src/app/actions/alarms.ts`.
+
+## Alarm Operations
+
+### getAlarmsService
+
+Retrieves a paginated list of alarms with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="site_id" type="string" optional>
+    Filter by site ID
+  </ParamField>
+  
+  <ParamField path="severity" type="string" optional>
+    Filter by severity level
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="Alarm[]">
+  Array of alarm objects
+</ResponseField>
+
+<ResponseField name="meta" type="AlarmsMeta">
+  Pagination metadata
+  
+  <ResponseField name="page" type="number">
+    Current page number
+  </ResponseField>
+  
+  <ResponseField name="limit" type="number">
+    Items per page
+  </ResponseField>
+  
+  <ResponseField name="total" type="number">
+    Total number of alarms
+  </ResponseField>
+  
+  <ResponseField name="total_pages" type="number">
+    Total number of pages
+  </ResponseField>
+  
+  <ResponseField name="has_next" type="boolean">
+    Whether there is a next page
+  </ResponseField>
+  
+  <ResponseField name="has_prev" type="boolean">
+    Whether there is a previous page
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+"use server";
+import { getAlarmsService } from "@/app/actions";
+
+export default async function AlarmsPage({ searchParams }) {
+  const params = await searchParams;
+  const page = parseInt(String(params?.page ?? 1), 10);
+  const limit = parseInt(String(params?.limit ?? 10), 10);
+
+  const { data: alarms, meta } = await getAlarmsService({ 
+    page, 
+    limit 
+  });
+
+  return <AlarmTable data={alarms} meta={meta} />;
+}
+```
+
+```typescript Filter by Site
+import { getAlarmsService } from "@/app/actions";
+
+const { data: alarms } = await getAlarmsService({
+  site_id: "site-123",
+  page: 1,
+  limit: 20,
+});
+```
+
+```typescript Filter by Severity
+import { getAlarmsService } from "@/app/actions";
+
+const { data: criticalAlarms } = await getAlarmsService({
+  severity: "critical",
+});
+```
+
+</CodeGroup>
+
+<Note>
+On API errors, this function returns an empty data array with default pagination metadata instead of throwing.
+</Note>
+
+---
+
+### getAlarmService
+
+Retrieves a single alarm by ID.
+
+<ParamField path="id" type="string" required>
+  Unique alarm identifier
+</ParamField>
+
+<ResponseField name="data" type="Alarm">
+  Complete alarm object with linked recommendations
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getAlarmService } from "@/app/actions";
+
+const alarm = await getAlarmService("alarm-123");
+
+console.log(alarm.parameter);
+console.log(alarm.acknowledged_status);
+console.log(alarm.linked_recommendations);
+```
+
+```typescript With Error Handling
+import { getAlarmService } from "@/app/actions";
+
+try {
+  const alarm = await getAlarmService(alarmId);
+  return <AlarmDetails alarm={alarm} />;
+} catch (error) {
+  console.error("Error fetching alarm:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### addAlarmService
+
+Creates a new alarm.
+
+<ParamField path="payload" type="AddAlarmPayload" required>
+  Alarm creation data
+  
+  <ParamField path="parameter" type="string" required>
+    Alarm parameter/condition (e.g., "High Temperature", "Excessive Wear")
+  </ParamField>
+  
+  <ParamField path="site" type="object" required>
+    <ParamField path="id" type="string" required>
+      Site ID where alarm occurred
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="first_detected" type="string" required>
+    Date when alarm was first detected (ISO format)
+  </ParamField>
+  
+  <ParamField path="acknowledged_status" type="boolean" required>
+    Whether the alarm has been acknowledged
+  </ParamField>
+  
+  <ParamField path="linked_recommendations" type="object[]" optional>
+    Array of linked recommendation IDs
+    
+    <ParamField path="id" type="string" required>
+      Recommendation ID
+    </ParamField>
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="statusCode" type="number">
+    HTTP status code
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created alarm data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addAlarmService } from "@/app/actions";
+import { AddAlarmPayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddAlarmForm() {
+  const handleSubmit = async (data: AddAlarmPayload) => {
+    const payload: AddAlarmPayload = {
+      parameter: data.parameter,
+      site: { id: data.site.id },
+      first_detected: new Date().toISOString(),
+      acknowledged_status: false,
+      linked_recommendations: [],
+    };
+
+    const response = await addAlarmService(payload);
+    
+    if (response.success) {
+      toast.success("Alarm created successfully");
+      router.push("/alarms");
+    } else {
+      toast.error(response.message || "Failed to create alarm");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript With Linked Recommendations
+import { addAlarmService } from "@/app/actions";
+
+const handleSubmit = async (data: AddAlarmPayload) => {
+  const payload = {
+    parameter: "Iron Content Exceeded",
+    site: { id: "site-456" },
+    first_detected: "2024-01-15T10:30:00Z",
+    acknowledged_status: false,
+    linked_recommendations: [
+      { id: "rec-123" },
+      { id: "rec-456" },
+    ],
+  };
+
+  const response = await addAlarmService(payload);
+  
+  if (response.success) {
+    toast.success("Alarm created with linked recommendations");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### editAlarmService
+
+Updates an existing alarm (typically used for acknowledgment).
+
+<ParamField path="id" type="string" required>
+  Alarm ID to update
+</ParamField>
+
+<ParamField path="payload" type="EditAlarmPayload" required>
+  Updated alarm data (same structure as AddAlarmPayload)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Acknowledge Alarm
+import { editAlarmService, getAlarmService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleAcknowledge = async (alarmId: string) => {
+  // Get current alarm data
+  const alarm = await getAlarmService(alarmId);
+  
+  // Update acknowledgment status
+  const payload = {
+    parameter: alarm.parameter,
+    site: { id: alarm.site.id },
+    first_detected: alarm.first_detected,
+    acknowledged_status: true,
+    linked_recommendations: alarm.linked_recommendations,
+  };
+
+  const response = await editAlarmService(alarmId, payload);
+  
+  if (response.success) {
+    toast.success("Alarm acknowledged successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+```typescript Update Linked Recommendations
+import { editAlarmService } from "@/app/actions";
+
+const handleLinkRecommendation = async (
+  alarmId: string, 
+  recommendationId: string
+) => {
+  const alarm = await getAlarmService(alarmId);
+  
+  const payload = {
+    ...alarm,
+    linked_recommendations: [
+      ...alarm.linked_recommendations,
+      { id: recommendationId },
+    ],
+  };
+
+  const response = await editAlarmService(alarmId, payload);
+  
+  if (response.success) {
+    toast.success("Recommendation linked to alarm");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteAlarmService
+
+Deletes an alarm.
+
+<ParamField path="id" type="string" required>
+  Alarm ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteAlarmService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (alarmId: string) => {
+  const response = await deleteAlarmService(alarmId);
+  
+  if (response.success) {
+    toast.success("Alarm deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+```typescript With Confirmation
+import { deleteAlarmService } from "@/app/actions";
+
+const handleDelete = async (alarmId: string) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this alarm?"
+  );
+  
+  if (!confirmed) return;
+  
+  const response = await deleteAlarmService(alarmId);
+  
+  if (response.success) {
+    toast.success("Alarm deleted");
+    router.push("/alarms");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+## Analytics Operations
+
+### getAlarmsAnalyticsService
+
+Retrieves alarm analytics for dashboard metrics and trend analysis.
+
+<ResponseField name="data" type="AlarmAnalytics | null">
+  Alarm analytics data or null on error
+  
+  <ResponseField name="total_alarms" type="number">
+    Total number of alarms in the system
+  </ResponseField>
+  
+  <ResponseField name="alarm_trend" type="object">
+    Alarm growth trend
+    
+    <ResponseField name="growth" type="number">
+      Number of new alarms in period
+    </ResponseField>
+    
+    <ResponseField name="percentage" type="number">
+      Percentage change from previous period
+    </ResponseField>
+  </ResponseField>
+  
+  <ResponseField name="open_overdue_alarms" type="number">
+    Number of open and overdue alarms
+  </ResponseField>
+  
+  <ResponseField name="open_overdue_trend" type="object">
+    Trend for open/overdue alarms
+    
+    <ResponseField name="growth" type="number">
+      Change in overdue alarms
+    </ResponseField>
+    
+    <ResponseField name="percentage" type="number">
+      Percentage change
+    </ResponseField>
+  </ResponseField>
+  
+  <ResponseField name="forecast_alarms" type="number">
+    Forecasted number of future alarms
+  </ResponseField>
+  
+  <ResponseField name="forecast_trend" type="object">
+    Forecast trend data
+    
+    <ResponseField name="growth" type="number">
+      Predicted growth
+    </ResponseField>
+    
+    <ResponseField name="percentage" type="number">
+      Percentage change prediction
+    </ResponseField>
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getAlarmsAnalyticsService } from "@/app/actions";
+
+export default async function AlarmsDashboard() {
+  const analytics = await getAlarmsAnalyticsService();
+
+  if (!analytics) {
+    return <div>Analytics unavailable</div>;
+  }
+
+  return (
+    <div>
+      <MetricCard 
+        title="Total Alarms" 
+        value={analytics.total_alarms}
+        trend={analytics.alarm_trend.percentage}
+      />
+      <MetricCard 
+        title="Open & Overdue" 
+        value={analytics.open_overdue_alarms}
+        trend={analytics.open_overdue_trend.percentage}
+      />
+      <MetricCard 
+        title="Forecast" 
+        value={analytics.forecast_alarms}
+        trend={analytics.forecast_trend.percentage}
+      />
+    </div>
+  );
+}
+```
+
+```typescript Client Component
+"use client";
+import { getAlarmsAnalyticsService } from "@/app/actions";
+import { useEffect, useState } from "react";
+
+export function AlarmAnalytics() {
+  const [analytics, setAnalytics] = useState(null);
+
+  useEffect(() => {
+    getAlarmsAnalyticsService().then(setAnalytics);
+  }, []);
+
+  if (!analytics) return <Loading />;
+
+  return (
+    <div>
+      <h2>Alarm Trends</h2>
+      <p>Growth: {analytics.alarm_trend.growth} alarms</p>
+      <p>Change: {analytics.alarm_trend.percentage}%</p>
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+<Note>
+Returns null on permission errors (403), non-JSON responses, or network issues instead of throwing. Always check for null before accessing properties.
+</Note>
+
+## Common Workflows
+
+### Alarm Acknowledgment Workflow
+
+<CodeGroup>
+
+```typescript Complete Workflow
+import { 
+  getAlarmService, 
+  editAlarmService, 
+  getRecommendationsService 
+} from "@/app/actions";
+import { toast } from "sonner";
+
+// 1. Fetch alarm details
+const alarm = await getAlarmService(alarmId);
+
+// 2. Show alarm details and recommendations
+const recommendations = await getRecommendationsService({
+  site_id: alarm.site.id,
+});
+
+// 3. Acknowledge alarm
+const acknowledgeAlarm = async () => {
+  const response = await editAlarmService(alarmId, {
+    ...alarm,
+    acknowledged_status: true,
+  });
+  
+  if (response.success) {
+    toast.success("Alarm acknowledged");
+  }
+};
+
+// 4. Link recommendation to alarm
+const linkRecommendation = async (recId: string) => {
+  const response = await editAlarmService(alarmId, {
+    ...alarm,
+    linked_recommendations: [
+      ...alarm.linked_recommendations,
+      { id: recId },
+    ],
+  });
+  
+  if (response.success) {
+    toast.success("Recommendation linked");
+  }
+};
+```
+
+</CodeGroup>
+
+### Dashboard Alarm Monitoring
+
+<CodeGroup>
+
+```typescript Alarm Dashboard
+import { 
+  getAlarmsService, 
+  getAlarmsAnalyticsService 
+} from "@/app/actions";
+
+export default async function AlarmsDashboard() {
+  const [alarms, analytics] = await Promise.all([
+    getAlarmsService({ limit: 10 }),
+    getAlarmsAnalyticsService(),
+  ]);
+
+  return (
+    <div>
+      {analytics && (
+        <div className="grid grid-cols-3 gap-4">
+          <MetricCard 
+            title="Total Alarms"
+            value={analytics.total_alarms}
+          />
+          <MetricCard 
+            title="Overdue"
+            value={analytics.open_overdue_alarms}
+          />
+          <MetricCard 
+            title="Forecasted"
+            value={analytics.forecast_alarms}
+          />
+        </div>
+      )}
+      
+      <AlarmTable data={alarms.data} meta={alarms.meta} />
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+## Type Definitions
+
+Import types from `@/types` and schemas from `@/schema`:
+
+```typescript
+import { Alarm, AlarmAnalytics } from "@/types";
+import { 
+  AddAlarmPayload, 
+  EditAlarmPayload, 
+  ADD_ALARM_SCHEMA 
+} from "@/schema";
+import { ApiResponse } from "@/app/actions";
+import { AlarmsMeta } from "@/app/actions/alarms";
+```
+
+## Related Actions
+
+- [Recommendation Actions](/api/actions/recommendations) - Link recommendations to alarms
+- [Sample Actions](/api/actions/samples) - Samples that trigger alarms
+- [Type Definitions](/api/types/alarms) - Alarm type definitions

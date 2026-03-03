@@ -1,0 +1,628 @@
+---
+title: Validation Utilities
+description: Zod schemas for form validation and data validation
+---
+
+Validation utilities provide Zod schemas for validating forms, API payloads, and user input across the MicroCBM application.
+
+## Overview
+
+All validation schemas are built with [Zod](https://zod.dev/), a TypeScript-first schema validation library. These schemas are used with React Hook Form for client-side validation and can also validate server action payloads.
+
+```typescript
+import { ADD_ASSET_SCHEMA, getRequiredStringSchema } from "@/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const form = useForm({
+  resolver: zodResolver(ADD_ASSET_SCHEMA),
+});
+```
+
+## Shared Validators
+
+Reusable schema builders for common field types.
+
+### getRequiredStringSchema
+
+Creates a required string field schema.
+
+<ParamField path="label" type="string" default="Field">
+  Field name for error messages
+</ParamField>
+
+<ParamField path="message" type="string">
+  Custom error message (defaults to "{label} is required")
+</ParamField>
+
+<ResponseField name="return" type="ZodString">
+  Zod string schema with minimum length of 1
+</ResponseField>
+
+```typescript
+import { getRequiredStringSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  name: getRequiredStringSchema("Asset name"),
+  tag: getRequiredStringSchema("Tag", "Tag is required and must be unique"),
+});
+```
+
+### getOptionalStringSchema
+
+Creates an optional string field schema that accepts `null` or `undefined`.
+
+<ResponseField name="return" type="ZodString">
+  Zod optional nullable string schema
+</ResponseField>
+
+```typescript
+import { getOptionalStringSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  notes: getOptionalStringSchema(),
+  description: getOptionalStringSchema(),
+});
+```
+
+### getRequiredEmailSchema
+
+Creates a required email field schema with validation.
+
+<ParamField path="label" type="string" default="Email">
+  Field name for error messages
+</ParamField>
+
+<ResponseField name="return" type="ZodString">
+  Zod string schema with email validation
+</ResponseField>
+
+```typescript
+import { getRequiredEmailSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  email: getRequiredEmailSchema("User email"),
+  contact_email: getRequiredEmailSchema(),
+});
+
+// Validation errors:
+// - Empty: "User email is required"
+// - Invalid format: "Invalid email"
+```
+
+### getRequiredNumberSchema
+
+Creates a required number field schema.
+
+<ParamField path="label" type="string" default="Field">
+  Field name for error messages
+</ParamField>
+
+<ResponseField name="return" type="ZodNumber">
+  Zod number schema with minimum value of 1
+</ResponseField>
+
+```typescript
+import { getRequiredNumberSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  quantity: getRequiredNumberSchema("Quantity"),
+  price: getRequiredNumberSchema("Price"),
+});
+```
+
+### getRequiredNumericStringSchema
+
+Creates a required string schema that accepts only numeric values (with optional decimal).
+
+<ParamField path="label" type="string" default="Field">
+  Field name for error messages
+</ParamField>
+
+<ResponseField name="return" type="ZodString">
+  Zod string schema that validates numeric format
+</ResponseField>
+
+```typescript
+import { getRequiredNumericStringSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  service_meter_reading: getRequiredNumericStringSchema("Service meter reading"),
+  oil_in_service: getRequiredNumericStringSchema("Oil in service"),
+});
+
+// Valid: "123", "123.45", "0.5"
+// Invalid: "abc", "12a3", ""
+```
+
+### createPasswordSchema
+
+Creates a password and confirm password validation schema.
+
+<ParamField path="label" type="string" default="Password">
+  Field name for error messages
+</ParamField>
+
+<ResponseField name="return" type="ZodObject">
+  Zod object schema with `password` and `confirmPassword` fields
+</ResponseField>
+
+```typescript
+import { createPasswordSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = createPasswordSchema("New password");
+
+type PasswordFields = z.infer<typeof schema>;
+// { password: string; confirmPassword: string }
+```
+
+**Password Requirements:**
+- Minimum 8 characters
+- At least one number
+- At least one uppercase letter
+- At least one special character (`!@#$%^&*()`)
+- Password and confirm password must match
+
+<CodeGroup>
+```typescript Usage in Form
+import { createPasswordSchema } from "@/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const ChangePasswordForm = () => {
+  const form = useForm({
+    resolver: zodResolver(createPasswordSchema()),
+  });
+  
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      <input {...form.register("password")} type="password" />
+      {form.formState.errors.password && (
+        <span>{form.formState.errors.password.message}</span>
+      )}
+      
+      <input {...form.register("confirmPassword")} type="password" />
+      {form.formState.errors.confirmPassword && (
+        <span>{form.formState.errors.confirmPassword.message}</span>
+      )}
+    </form>
+  );
+};
+```
+</CodeGroup>
+
+### getRequiredOTPSchema
+
+Creates an OTP (One-Time Password) field schema.
+
+<ParamField path="label" type="string" default="OTP">
+  Field name for error messages
+</ParamField>
+
+<ResponseField name="return" type="ZodString">
+  Zod string schema requiring 6 digits
+</ResponseField>
+
+```typescript
+import { getRequiredOTPSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  otp: getRequiredOTPSchema("Verification code"),
+});
+
+// Error: "Verification code must be 6 digits"
+```
+
+### getDigitSchema
+
+Creates a schema for digit-only strings with minimum length.
+
+<ParamField path="field" type="string" default="Field">
+  Field name for error messages
+</ParamField>
+
+<ParamField path="minLength" type="number" default="1">
+  Minimum number of digits required
+</ParamField>
+
+<ResponseField name="return" type="ZodString">
+  Zod string schema validating digits only
+</ResponseField>
+
+```typescript
+import { getDigitSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  pin: getDigitSchema("PIN", 4),
+  account_number: getDigitSchema("Account number", 10),
+});
+
+// Valid: "1234", "1234567890"
+// Invalid: "12", "abc", "12a4"
+```
+
+### getFullNameSchema
+
+Creates a schema for full names (requires first and last name).
+
+<ResponseField name="return" type="ZodString">
+  Zod string schema requiring at least two space-separated words
+</ResponseField>
+
+```typescript
+import { getFullNameSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  full_name: getFullNameSchema(),
+});
+
+// Valid: "John Doe", "Mary Jane Watson"
+// Invalid: "John", "  ", "J"
+```
+
+### getValidNigerianPhoneNumber
+
+Creates a schema for Nigerian phone numbers.
+
+<ResponseField name="return" type="ZodString">
+  Zod string schema validating Nigerian phone format
+</ResponseField>
+
+```typescript
+import { getValidNigerianPhoneNumber } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  phone: getValidNigerianPhoneNumber(),
+});
+
+// Valid: "08031234567", "2348031234567", "+2348031234567"
+// Invalid: "1234567890", "08012345" (too short)
+```
+
+### getOptionalNigerianPhoneSchema
+
+Creates an optional Nigerian phone number schema.
+
+<ResponseField name="return" type="ZodString">
+  Zod optional string schema for Nigerian phone numbers
+</ResponseField>
+
+```typescript
+import { getOptionalNigerianPhoneSchema } from "@/schema";
+import { z } from "zod";
+
+const schema = z.object({
+  alternate_phone: getOptionalNigerianPhoneSchema(),
+});
+```
+
+## Authentication Schemas
+
+Validation schemas for authentication flows.
+
+### SIGN_UP_STEP_1_SCHEMA
+
+Validates user information and password in the sign-up flow.
+
+```typescript
+import { SIGN_UP_STEP_1_SCHEMA } from "@/schema";
+import { z } from "zod";
+
+type SignUpStep1 = z.infer<typeof SIGN_UP_STEP_1_SCHEMA>;
+// {
+//   user: {
+//     first_name: string;
+//     last_name: string;
+//     email: string;
+//   };
+//   password: string;
+// }
+```
+
+**Fields:**
+- `user.first_name` - Required
+- `user.last_name` - Required
+- `user.email` - Required, valid email format
+- `password` - Required, minimum 8 characters, must contain:
+  - At least one number
+  - At least one uppercase letter
+  - At least one special character (`!@#$%^&*()`)
+
+### SIGN_UP_STEP_2_SCHEMA
+
+Validates organization information in the sign-up flow.
+
+```typescript
+import { SIGN_UP_STEP_2_SCHEMA } from "@/schema";
+import { z } from "zod";
+
+type SignUpStep2 = z.infer<typeof SIGN_UP_STEP_2_SCHEMA>;
+// {
+//   organization: {
+//     name: string;
+//     industry: string;
+//     team_strength: string;
+//   };
+// }
+```
+
+**Fields:**
+- `organization.name` - Required
+- `organization.industry` - Required
+- `organization.team_strength` - Required
+
+### SIGN_UP_FULL_SCHEMA
+
+Complete sign-up validation schema combining both steps.
+
+```typescript
+import { SIGN_UP_FULL_SCHEMA } from "@/schema";
+import { z } from "zod";
+
+type SignUpPayload = z.infer<typeof SIGN_UP_FULL_SCHEMA>;
+// {
+//   user: { first_name: string; last_name: string; email: string };
+//   organization: { name: string; industry: string; team_strength: string; logo_url?: string | null };
+//   password: string;
+// }
+```
+
+## Asset Schemas
+
+Validation schemas for asset management.
+
+### ADD_ASSET_SCHEMA
+
+Validates asset creation and updates.
+
+```typescript
+import { ADD_ASSET_SCHEMA } from "@/schema";
+import { z } from "zod";
+
+type AddAssetPayload = z.infer<typeof ADD_ASSET_SCHEMA>;
+```
+
+**Required Fields:**
+- `name` - Asset name
+- `tag` - Unique asset tag
+- `parent_site.id` - Site ID
+- `type` - Asset type (from `ASSET_TYPE_OPTIONS`)
+- `model_number` - Model number
+- `serial_number` - Serial number
+- `criticality_level` - Criticality level
+- `operating_hours` - Operating hours
+- `commissioned_date` - Commission date
+- `status` - Operational status
+- `maintenance_strategy` - Maintenance strategy
+- `last_performed_maintenance` - Last maintenance date
+- `major_overhaul` - Major overhaul date
+- `last_date_overhaul` - Last overhaul date
+- `assignee.id` - Assigned user ID
+- `power_rating` - Power rating in kW
+- `speed` - Speed in RPM
+- `capacity` - Capacity in m³/h
+
+**Optional Fields:**
+- `equipment_class` - Equipment classification
+- `manufacturer` - Manufacturer name
+- `is_modified` - Boolean flag
+- `datasheet` - Object with `file_url`, `file_name`, `uploaded_at`
+
+<CodeGroup>
+```tsx Asset Form
+import { ADD_ASSET_SCHEMA } from "@/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const AddAssetForm = () => {
+  const form = useForm({
+    resolver: zodResolver(ADD_ASSET_SCHEMA),
+  });
+  
+  const onSubmit = async (data) => {
+    await createAsset(data);
+  };
+  
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      <input {...form.register("name")} />
+      <input {...form.register("tag")} />
+      {/* ... other fields */}
+    </form>
+  );
+};
+```
+
+```typescript Server Action
+import { ADD_ASSET_SCHEMA } from "@/schema";
+
+export async function createAsset(payload: unknown) {
+  const validated = ADD_ASSET_SCHEMA.parse(payload);
+  
+  const response = await fetch(`${API_URL}/assets`, {
+    method: "POST",
+    body: JSON.stringify(validated),
+  });
+  
+  return response.json();
+}
+```
+</CodeGroup>
+
+## Sample Schemas
+
+Validation schemas for oil sample reports.
+
+### ADD_SAMPLE_SCHEMA
+
+Validates sample creation.
+
+```typescript
+import { ADD_SAMPLE_SCHEMA } from "@/schema";
+import { z } from "zod";
+
+type AddSamplePayload = z.infer<typeof ADD_SAMPLE_SCHEMA>;
+```
+
+**Required Fields:**
+- `site.id` - Site ID
+- `asset.id` - Asset ID
+- `sampling_point.id` - Sampling point ID
+- `serial_number` - Sample serial number
+- `date_sampled` - Sample date (timestamp)
+- `lab_name` - Laboratory name
+- `service_meter_reading` - Numeric string
+- `hrs` - Operating hours
+- `oil_in_service` - Numeric string
+- `filter_changed` - Yes/No
+- `oil_drained` - Yes/No
+- `severity` - Severity level
+
+**Optional Fields:**
+- `wear_metals` - Record of metal types to values
+- `contaminants` - Array of `{ type, value, unit }`
+- `particle_counts` - Array of `{ size_range, count, unit }`
+- `viscosity_levels` - Array of `{ temperature, viscosity, unit }`
+- `additives` - Record or array of additives
+- `collection_date` - Collection date string
+- `document_url` - Attachment URL
+
+### EDIT_SAMPLE_SCHEMA
+
+Validates sample updates (same structure as `ADD_SAMPLE_SCHEMA` without `document_url`).
+
+```typescript
+import { EDIT_SAMPLE_SCHEMA } from "@/schema";
+import { z } from "zod";
+
+type EditSamplePayload = z.infer<typeof EDIT_SAMPLE_SCHEMA>;
+```
+
+<CodeGroup>
+```tsx Sample Form
+import { ADD_SAMPLE_SCHEMA } from "@/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const AddSampleForm = () => {
+  const form = useForm({
+    resolver: zodResolver(ADD_SAMPLE_SCHEMA),
+    defaultValues: {
+      wear_metals: {},
+      contaminants: [],
+      particle_counts: [],
+      viscosity_levels: [],
+    },
+  });
+  
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      <input {...form.register("serial_number")} />
+      <input {...form.register("lab_name")} />
+      <input
+        {...form.register("service_meter_reading")}
+        type="text"
+        inputMode="numeric"
+      />
+      {/* ... other fields */}
+    </form>
+  );
+};
+```
+
+```typescript Nested Arrays
+import { ADD_SAMPLE_SCHEMA } from "@/schema";
+import { useFieldArray } from "react-hook-form";
+
+const ContaminantsSection = ({ control }) => {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "contaminants",
+  });
+  
+  return (
+    <div>
+      {fields.map((field, index) => (
+        <div key={field.id}>
+          <input {...control.register(`contaminants.${index}.type`)} />
+          <input {...control.register(`contaminants.${index}.value`)} type="number" />
+          <input {...control.register(`contaminants.${index}.unit`)} />
+          <button onClick={() => remove(index)}>Remove</button>
+        </div>
+      ))}
+      <button onClick={() => append({ type: "", value: 0, unit: "" })}>
+        Add Contaminant
+      </button>
+    </div>
+  );
+};
+```
+</CodeGroup>
+
+## Other Entity Schemas
+
+Additional schemas are available for:
+
+- **Alarms** - `ADD_ALARM_SCHEMA`, `EDIT_ALARM_SCHEMA`
+- **Recommendations** - `ADD_RECOMMENDATION_SCHEMA`, `EDIT_RECOMMENDATION_SCHEMA`
+- **Organizations** - `ADD_ORGANIZATION_SCHEMA`, `EDIT_ORGANIZATION_SCHEMA`
+- **Sites** - `ADD_SITE_SCHEMA`, `EDIT_SITE_SCHEMA`
+- **Departments** - `ADD_DEPARTMENT_SCHEMA`, `EDIT_DEPARTMENT_SCHEMA`
+- **Users** - `CREATE_USER_SCHEMA`, `EDIT_USER_SCHEMA`
+- **Roles** - `CREATE_ROLE_SCHEMA`, `EDIT_ROLE_SCHEMA`
+- **Sampling Points** - `ADD_SAMPLING_POINT_SCHEMA`, `EDIT_SAMPLING_POINT_SCHEMA`
+- **Sampling Routes** - `ADD_SAMPLING_ROUTE_SCHEMA`, `EDIT_SAMPLING_ROUTE_SCHEMA`
+
+All schemas follow similar patterns and are exported from `@/schema`.
+
+## Type Inference
+
+Zod schemas automatically generate TypeScript types:
+
+```typescript
+import { z } from "zod";
+import { ADD_ASSET_SCHEMA, ADD_SAMPLE_SCHEMA } from "@/schema";
+
+type AssetPayload = z.infer<typeof ADD_ASSET_SCHEMA>;
+type SamplePayload = z.infer<typeof ADD_SAMPLE_SCHEMA>;
+
+// Use inferred types in functions
+const createAsset = async (data: AssetPayload) => {
+  // data is fully typed
+};
+```
+
+## Best Practices
+
+<Note>
+**Client and Server Validation**: Always validate on the client with React Hook Form and Zod, then re-validate on the server in server actions to ensure data integrity.
+</Note>
+
+<Note>
+**Custom Error Messages**: Use the `label` parameter in schema builders to provide user-friendly error messages that match your UI field labels.
+</Note>
+
+<Note>
+**Type Safety**: Use `z.infer<typeof SCHEMA>` to generate TypeScript types from schemas. This ensures your types stay in sync with validation rules.
+</Note>
+
+<Note>
+**Numeric Strings**: Use `getRequiredNumericStringSchema()` for inputs that must be numeric but are stored as strings (common with form inputs). This prevents validation errors from string-number type mismatches.
+</Note>
+
+## Related Resources
+
+- [Forms & Validation Guide](/development/forms-validation) - Practical guide to form handling
+- [Server Actions](/api/actions/overview) - Using validated data in server actions
+- [Type Definitions](/api/types/overview) - Entity type definitions
+- [Zod Documentation](https://zod.dev/) - Official Zod documentation

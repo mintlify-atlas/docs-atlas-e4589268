@@ -1,0 +1,230 @@
+---
+title: Server Actions Overview
+description: Complete reference for MicroCBM Next.js Server Actions
+---
+
+## Introduction
+
+MicroCBM uses Next.js 15 Server Actions to handle all data operations with the backend API. These server-side functions are marked with `"use server"` and provide type-safe, authenticated communication with the REST API.
+
+## Architecture
+
+All Server Actions are located in `src/app/actions/` and follow a consistent pattern:
+
+- **Authentication**: Automatic token injection via `requestWithAuth` helper
+- **Error Handling**: Consistent error responses with status codes and messages
+- **Type Safety**: Full TypeScript types for requests and responses
+- **Pagination**: Standard pagination with `page`, `limit`, and metadata
+
+## Common Patterns
+
+### Authentication Flow
+
+All actions automatically include the authentication token from cookies:
+
+```typescript
+import { requestWithAuth } from "./helpers";
+
+const response = await requestWithAuth("/api/v1/endpoint", {
+  method: "GET",
+});
+```
+
+### Response Format
+
+All mutation actions return an `ApiResponse` object:
+
+```typescript
+interface ApiResponse {
+  success?: boolean;
+  statusCode?: number;
+  message?: string;
+  data?: Record<string, unknown>;
+}
+```
+
+### Pagination Format
+
+List operations return paginated results:
+
+```typescript
+interface GetResult<T> {
+  data: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+```
+
+## Error Handling
+
+Server Actions handle errors gracefully:
+
+- **403 Forbidden**: Returns empty data array (permission denied)
+- **Network Errors**: Returns error with appropriate status code
+- **Validation Errors**: Returns error message from backend
+
+<CodeGroup>
+
+```typescript Success Response
+const response = await addAssetService(payload);
+
+if (response.success) {
+  console.log("Asset created successfully");
+  // response.data contains the created resource
+}
+```
+
+```typescript Error Response
+const response = await addAssetService(payload);
+
+if (!response.success) {
+  console.error(response.message);
+  // response.statusCode contains HTTP status code
+}
+```
+
+</CodeGroup>
+
+## Available Actions
+
+### Asset Management
+
+CRUD operations for assets and sites, plus analytics.
+
+[View Asset Actions →](/api/actions/assets)
+
+### Sample Management
+
+Manage oil samples with wear metals, contaminants, and particle counts.
+
+[View Sample Actions →](/api/actions/samples)
+
+### Alarm Management
+
+Monitor and acknowledge alarms with linked recommendations.
+
+[View Alarm Actions →](/api/actions/alarms)
+
+### Recommendations
+
+Create and manage maintenance recommendations with severity levels.
+
+[View Recommendation Actions →](/api/actions/recommendations)
+
+### Organizations & Sites
+
+Manage organizational hierarchy: organizations, sites, and departments.
+
+[View Organization Actions →](/api/actions/organizations)
+
+### Authentication
+
+Handle user authentication, OTP verification, and password reset.
+
+[View Auth Actions →](/api/actions/auth)
+
+## Usage in Components
+
+Server Actions can be used in both Server Components and Client Components:
+
+<CodeGroup>
+
+```typescript Server Component
+"use server";
+import { getAssetsService } from "@/app/actions";
+
+export default async function AssetsPage() {
+  const { data: assets, meta } = await getAssetsService({
+    page: 1,
+    limit: 10,
+  });
+
+  return <AssetTable data={assets} meta={meta} />;
+}
+```
+
+```typescript Client Component
+"use client";
+import { addAssetService } from "@/app/actions";
+import { toast } from "sonner";
+
+export function AddAssetForm() {
+  const handleSubmit = async (payload: AddAssetPayload) => {
+    const response = await addAssetService(payload);
+    
+    if (response.success) {
+      toast.success("Asset added successfully");
+    } else {
+      toast.error(response.message);
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+</CodeGroup>
+
+## Best Practices
+
+### Always Check Response Status
+
+Verify `response.success` before accessing data:
+
+```typescript
+const response = await addAssetService(payload);
+
+if (response.success) {
+  // Safe to access response.data
+} else {
+  // Handle error with response.message
+}
+```
+
+### Handle Empty Results
+
+List operations return empty arrays on permission errors:
+
+```typescript
+const { data: assets } = await getAssetsService();
+
+if (assets.length === 0) {
+  return <EmptyState />;
+}
+```
+
+### Use Type Inference
+
+Import payload types from `@/schema` for form validation:
+
+```typescript
+import { AddAssetPayload, ADD_ASSET_SCHEMA } from "@/schema";
+import { z } from "zod";
+
+const form = useForm<AddAssetPayload>({
+  resolver: zodResolver(ADD_ASSET_SCHEMA),
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Asset Actions" icon="box" href="/api/actions/assets">
+    Learn about asset and site management actions
+  </Card>
+  <Card title="Sample Actions" icon="flask" href="/api/actions/samples">
+    Explore oil sample analysis actions
+  </Card>
+  <Card title="Alarm Actions" icon="bell" href="/api/actions/alarms">
+    Discover alarm monitoring and acknowledgment
+  </Card>
+  <Card title="Recommendation Actions" icon="lightbulb" href="/api/actions/recommendations">
+    View maintenance recommendation actions
+  </Card>
+</CardGroup>

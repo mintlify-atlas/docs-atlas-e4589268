@@ -1,0 +1,942 @@
+---
+title: Authentication Actions
+description: Server Actions for user authentication and session management
+---
+
+## Overview
+
+Authentication actions handle user login, registration, OTP verification, and password reset workflows. All functions are located in `src/app/actions/auth.ts`.
+
+<Note>
+MicroCBM uses OTP-based authentication. After login or registration, users must verify a 6-digit code sent to their email before a session is created.
+</Note>
+
+## Authentication Flow
+
+The typical authentication flow involves multiple steps:
+
+1. **Login/Signup**: User provides credentials
+2. **OTP Verification**: User enters 6-digit code from email
+3. **Session Creation**: Token stored in secure cookie
+4. **Authenticated Requests**: Token automatically included in all API calls
+
+## Login Operations
+
+### loginService
+
+Initiates the login process. Returns success if credentials are valid; OTP will be sent to the user's email.
+
+<ParamField path="payload" type="object" required>
+  Login credentials
+  
+  <ParamField path="email" type="string" required>
+    User email address
+  </ParamField>
+  
+  <ParamField path="password" type="string" required>
+    User password
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether login credentials are valid
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message (e.g., "OTP sent to email")
+  </ResponseField>
+  
+  <ResponseField name="statusCode" type="number" optional>
+    HTTP status code
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { loginService } from "@/app/actions";
+import { toast } from "sonner";
+import { useState } from "react";
+
+export function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [showOtp, setShowOtp] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await loginService({
+      email: email,
+      password: password,
+    });
+    
+    if (response.success) {
+      toast.success("OTP sent to your email");
+      setShowOtp(true);
+    } else {
+      toast.error(response.message || "Login failed");
+    }
+  };
+
+  return (
+    <form onSubmit={handleLogin}>
+      <input 
+        type="email" 
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email" 
+      />
+      <input 
+        type="password" 
+        placeholder="Password" 
+      />
+      <button type="submit">Login</button>
+      
+      {showOtp && <OtpInput email={email} />}
+    </form>
+  );
+}
+```
+
+```typescript Basic Usage
+import { loginService } from "@/app/actions";
+
+const response = await loginService({
+  email: "user@example.com",
+  password: "securePassword123",
+});
+
+if (response.success) {
+  // Show OTP input form
+  console.log("Check your email for OTP");
+} else {
+  console.error(response.message);
+}
+```
+
+</CodeGroup>
+
+<Warning>
+This function does NOT create a session. You must call `verifyOTPService` with the OTP code to complete authentication.
+</Warning>
+
+---
+
+## Registration Operations
+
+### signupService
+
+Registers a new user with their organization. Returns success if registration is valid; OTP will be sent to the user's email.
+
+<ParamField path="formData" type="object" required>
+  Registration data
+  
+  <ParamField path="user" type="object" required>
+    User information
+    
+    <ParamField path="first_name" type="string" required>
+      User's first name
+    </ParamField>
+    
+    <ParamField path="last_name" type="string" required>
+      User's last name
+    </ParamField>
+    
+    <ParamField path="email" type="string" required>
+      User's email address
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="organization" type="object" required>
+    Organization information
+    
+    <ParamField path="name" type="string" required>
+      Organization name
+    </ParamField>
+    
+    <ParamField path="industry" type="string" required>
+      Industry sector
+    </ParamField>
+    
+    <ParamField path="team_strength" type="string" required>
+      Team size (e.g., "1-10", "10-50", "50-100")
+    </ParamField>
+    
+    <ParamField path="logo_url" type="string" required>
+      Organization logo URL (can be empty string)
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="password" type="string" required>
+    User password
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether registration succeeded
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { signupService } from "@/app/actions";
+import { toast } from "sonner";
+import { useState } from "react";
+
+export function SignupForm() {
+  const [email, setEmail] = useState("");
+  const [showOtp, setShowOtp] = useState(false);
+
+  const handleSignup = async (data: SignupFormData) => {
+    const response = await signupService({
+      user: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+      },
+      organization: {
+        name: data.organizationName,
+        industry: data.industry,
+        team_strength: data.teamSize,
+        logo_url: "",
+      },
+      password: data.password,
+    });
+    
+    if (response.success) {
+      toast.success("Registration successful! Check your email for OTP");
+      setEmail(data.email);
+      setShowOtp(true);
+    } else {
+      toast.error(response.message || "Registration failed");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSignup}>
+      {/* Form fields */}
+      {showOtp && <OtpInput email={email} />}
+    </form>
+  );
+}
+```
+
+```typescript With Logo Upload
+import { signupService, uploadImage } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleSignup = async (data: SignupFormData, logoFile?: File) => {
+  let logoUrl = "";
+  
+  // Upload logo if provided
+  if (logoFile) {
+    const uploadResponse = await uploadImage(logoFile);
+    if (uploadResponse.success) {
+      logoUrl = uploadResponse.data.file_key;
+    }
+  }
+
+  const response = await signupService({
+    user: {
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+    },
+    organization: {
+      name: data.organizationName,
+      industry: data.industry,
+      team_strength: data.teamSize,
+      logo_url: logoUrl,
+    },
+    password: data.password,
+  });
+  
+  if (response.success) {
+    toast.success("Registration successful!");
+  }
+};
+```
+
+</CodeGroup>
+
+<Warning>
+Like login, this function does NOT create a session. Call `verifyOTPService` to complete registration.
+</Warning>
+
+---
+
+## OTP Verification
+
+### verifyOTPService
+
+Verifies the OTP code and creates an authenticated session. This must be called after `loginService` or `signupService`.
+
+<ParamField path="formData" type="object" required>
+  OTP verification data
+  
+  <ParamField path="email" type="string" required>
+    User's email address
+  </ParamField>
+  
+  <ParamField path="otp" type="string" required>
+    6-digit OTP code from email
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether OTP verification succeeded
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Response data containing token
+    
+    <ResponseField name="token" type="string">
+      JWT authentication token
+    </ResponseField>
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { verifyOTPService } from "@/app/actions";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+export function OtpInput({ email }: { email: string }) {
+  const router = useRouter();
+  const [otp, setOtp] = useState("");
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await verifyOTPService({
+      email,
+      otp,
+    });
+    
+    if (response.success) {
+      toast.success("Login successful!");
+      router.push("/dashboard");
+    } else {
+      toast.error(response.message || "Invalid OTP");
+    }
+  };
+
+  return (
+    <form onSubmit={handleVerifyOtp}>
+      <input 
+        type="text" 
+        value={otp}
+        onChange={(e) => setOtp(e.target.value)}
+        placeholder="Enter 6-digit OTP" 
+        maxLength={6}
+      />
+      <button type="submit">Verify</button>
+    </form>
+  );
+}
+```
+
+```typescript Complete Login Flow
+import { loginService, verifyOTPService } from "@/app/actions";
+import { toast } from "sonner";
+
+// Step 1: Login
+const loginResponse = await loginService({
+  email: "user@example.com",
+  password: "password123",
+});
+
+if (!loginResponse.success) {
+  toast.error("Invalid credentials");
+  return;
+}
+
+toast.success("OTP sent to your email");
+
+// Step 2: User enters OTP from email
+const otpCode = "123456"; // From user input
+
+// Step 3: Verify OTP
+const verifyResponse = await verifyOTPService({
+  email: "user@example.com",
+  otp: otpCode,
+});
+
+if (verifyResponse.success) {
+  toast.success("Login successful!");
+  // Session is now created, user is authenticated
+  router.push("/dashboard");
+} else {
+  toast.error("Invalid OTP");
+}
+```
+
+</CodeGroup>
+
+<Note>
+This function automatically creates a session cookie with the JWT token. All subsequent requests will include authentication.
+</Note>
+
+---
+
+## Password Reset Operations
+
+### requestPasswordResetService
+
+Initiates password reset process by sending OTP to user's email.
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether reset request succeeded
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { requestPasswordResetService } from "@/app/actions";
+import { toast } from "sonner";
+
+export function ForgotPasswordForm() {
+  const [email, setEmail] = useState("");
+  const [showOtpInput, setShowOtpInput] = useState(false);
+
+  const handleRequestReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await requestPasswordResetService(email);
+    
+    if (response.success) {
+      toast.success("Reset code sent to your email");
+      setShowOtpInput(true);
+    } else {
+      toast.error(response.message || "Failed to send reset code");
+    }
+  };
+
+  return (
+    <form onSubmit={handleRequestReset}>
+      <input 
+        type="email" 
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Enter your email" 
+      />
+      <button type="submit">Send Reset Code</button>
+      
+      {showOtpInput && <PasswordResetOtpInput email={email} />}
+    </form>
+  );
+}
+```
+
+</CodeGroup>
+
+---
+
+### verifyPasswordResetOTPService
+
+Verifies the password reset OTP code.
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField path="otp" type="string" required>
+  6-digit OTP code from email
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether OTP verification succeeded
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+import { verifyPasswordResetOTPService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleVerifyOtp = async (email: string, otp: string) => {
+  const response = await verifyPasswordResetOTPService(email, otp);
+  
+  if (response.success) {
+    toast.success("OTP verified! Enter new password");
+    setShowPasswordInput(true);
+  } else {
+    toast.error(response.message || "Invalid OTP");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### resetPasswordService
+
+Resets the user's password after OTP verification.
+
+<ParamField path="payload" type="object" required>
+  Password reset data
+  
+  <ParamField path="email" type="string" required>
+    User's email address
+  </ParamField>
+  
+  <ParamField path="password" type="string" required>
+    New password
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether password reset succeeded
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+import { resetPasswordService } from "@/app/actions";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+export function ResetPasswordForm({ email }: { email: string }) {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await resetPasswordService({
+      email,
+      password,
+    });
+    
+    if (response.success) {
+      toast.success("Password reset successful!");
+      router.push("/auth/login");
+    } else {
+      toast.error(response.message || "Failed to reset password");
+    }
+  };
+
+  return (
+    <form onSubmit={handleResetPassword}>
+      <input 
+        type="password" 
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Enter new password" 
+      />
+      <button type="submit">Reset Password</button>
+    </form>
+  );
+}
+```
+
+```typescript Complete Reset Flow
+import { 
+  requestPasswordResetService,
+  verifyPasswordResetOTPService,
+  resetPasswordService 
+} from "@/app/actions";
+import { toast } from "sonner";
+
+// Step 1: Request reset
+const requestResponse = await requestPasswordResetService(
+  "user@example.com"
+);
+
+if (!requestResponse.success) {
+  toast.error("Failed to send reset code");
+  return;
+}
+
+toast.success("Reset code sent to your email");
+
+// Step 2: Verify OTP
+const otpCode = "123456"; // From user input
+const verifyResponse = await verifyPasswordResetOTPService(
+  "user@example.com",
+  otpCode
+);
+
+if (!verifyResponse.success) {
+  toast.error("Invalid OTP");
+  return;
+}
+
+// Step 3: Reset password
+const resetResponse = await resetPasswordService({
+  email: "user@example.com",
+  password: "newSecurePassword123",
+});
+
+if (resetResponse.success) {
+  toast.success("Password reset successful!");
+  router.push("/auth/login");
+}
+```
+
+</CodeGroup>
+
+---
+
+## Session Management
+
+### logout
+
+Logs out the current user by destroying the session cookie.
+
+<ResponseField name="void" type="void">
+  No return value
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { logout } from "@/app/actions";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+export function LogoutButton() {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success("Logged out successfully");
+    router.push("/auth/login");
+  };
+
+  return (
+    <button onClick={handleLogout}>
+      Logout
+    </button>
+  );
+}
+```
+
+```typescript With Confirmation
+import { logout } from "@/app/actions";
+
+const handleLogout = async () => {
+  const confirmed = window.confirm("Are you sure you want to log out?");
+  
+  if (!confirmed) return;
+  
+  await logout();
+  router.push("/auth/login");
+};
+```
+
+</CodeGroup>
+
+<Note>
+After logout, the user will be redirected to `/auth/login` by the middleware on any protected route access.
+</Note>
+
+---
+
+## Complete Authentication Workflows
+
+### Login Workflow
+
+<CodeGroup>
+
+```typescript Complete Login Flow
+import { loginService, verifyOTPService } from "@/app/actions";
+import { toast } from "sonner";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOtp, setShowOtp] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await loginService({ email, password });
+    
+    if (response.success) {
+      toast.success("OTP sent to your email");
+      setShowOtp(true);
+    } else {
+      toast.error(response.message || "Invalid credentials");
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await verifyOTPService({ email, otp });
+    
+    if (response.success) {
+      toast.success("Login successful!");
+      router.push("/dashboard");
+    } else {
+      toast.error(response.message || "Invalid OTP");
+    }
+  };
+
+  return (
+    <div>
+      {!showOtp ? (
+        <form onSubmit={handleLogin}>
+          <input 
+            type="email" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email" 
+          />
+          <input 
+            type="password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password" 
+          />
+          <button type="submit">Login</button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerifyOtp}>
+          <input 
+            type="text" 
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            placeholder="Enter 6-digit OTP" 
+            maxLength={6}
+          />
+          <button type="submit">Verify OTP</button>
+        </form>
+      )}
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+### Password Reset Workflow
+
+<CodeGroup>
+
+```typescript Complete Reset Flow
+import { 
+  requestPasswordResetService,
+  verifyPasswordResetOTPService,
+  resetPasswordService 
+} from "@/app/actions";
+import { toast } from "sonner";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export function ForgotPasswordPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
+  const [step, setStep] = useState(1); // 1: email, 2: otp, 3: password
+
+  const handleRequestReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await requestPasswordResetService(email);
+    
+    if (response.success) {
+      toast.success("Reset code sent to your email");
+      setStep(2);
+    } else {
+      toast.error(response.message);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await verifyPasswordResetOTPService(email, otp);
+    
+    if (response.success) {
+      toast.success("OTP verified!");
+      setStep(3);
+    } else {
+      toast.error(response.message);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const response = await resetPasswordService({ email, password });
+    
+    if (response.success) {
+      toast.success("Password reset successful!");
+      router.push("/auth/login");
+    } else {
+      toast.error(response.message);
+    }
+  };
+
+  return (
+    <div>
+      {step === 1 && (
+        <form onSubmit={handleRequestReset}>
+          <input 
+            type="email" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email" 
+          />
+          <button type="submit">Send Reset Code</button>
+        </form>
+      )}
+      
+      {step === 2 && (
+        <form onSubmit={handleVerifyOtp}>
+          <input 
+            type="text" 
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            placeholder="Enter OTP" 
+            maxLength={6}
+          />
+          <button type="submit">Verify OTP</button>
+        </form>
+      )}
+      
+      {step === 3 && (
+        <form onSubmit={handleResetPassword}>
+          <input 
+            type="password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter new password" 
+          />
+          <button type="submit">Reset Password</button>
+        </form>
+      )}
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+## Security Considerations
+
+### Session Storage
+
+Authentication tokens are stored in secure HTTP-only cookies:
+
+- **Secure**: Cookies are marked as secure in production
+- **HTTP-Only**: Not accessible via JavaScript
+- **SameSite**: CSRF protection enabled
+- **Automatic**: Token automatically included in all API requests
+
+### Token Management
+
+Tokens are managed automatically by the `requestWithAuth` helper:
+
+```typescript
+// src/app/actions/helpers.ts
+import { cookies } from "next/headers";
+
+export async function requestWithAuth(
+  input: RequestInfo,
+  init?: RequestInit
+): Promise<Response> {
+  const token = (await cookies()).get("token")?.value;
+  const headers = new Headers(init?.headers || {});
+  
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  
+  return fetch(url, { ...init, headers });
+}
+```
+
+### Middleware Protection
+
+All routes except `/auth/*` are protected by middleware:
+
+```typescript
+// src/middleware.ts
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - /auth/* (authentication pages)
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico, etc.
+     */
+    "/((?!auth|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest).*)",
+  ],
+};
+```
+
+## Type Definitions
+
+Import types from `@/app/actions`:
+
+```typescript
+import { ApiResponse } from "@/app/actions";
+```
+
+## Related Actions
+
+- [User Management](/api/actions/user) - User profile and settings
+- [Organization Actions](/api/actions/organizations) - Organization created during signup

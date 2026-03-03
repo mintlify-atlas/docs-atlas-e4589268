@@ -1,0 +1,883 @@
+---
+title: Forms & Validation
+description: Form management with React Hook Form and validation with Zod schemas
+icon: square-check
+---
+
+## Overview
+
+MicroCBM uses React Hook Form for form state management and Zod for schema validation, providing type-safe forms with minimal boilerplate.
+
+<CardGroup cols={2}>
+  <Card title="React Hook Form" icon="wpforms">
+    Performant form state management with uncontrolled components
+  </Card>
+  <Card title="Zod" icon="shield-check">
+    TypeScript-first schema validation with type inference
+  </Card>
+</CardGroup>
+
+## React Hook Form
+
+React Hook Form manages form state with minimal re-renders and easy validation integration.
+
+### Basic Form Setup
+
+```typescript
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const schema = z.object({
+  email: z.string().email("Invalid email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type FormData = z.infer<typeof schema>;
+
+function LoginForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  });
+  
+  const onSubmit = async (data: FormData) => {
+    // Handle form submission
+    await loginUser(data);
+  };
+  
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register("email")} type="email" />
+      {errors.email && <span>{errors.email.message}</span>}
+      
+      <input {...register("password")} type="password" />
+      {errors.password && <span>{errors.password.message}</span>}
+      
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Logging in..." : "Login"}
+      </button>
+    </form>
+  );
+}
+```
+
+### Form with Controller
+
+For complex components that don't expose a ref (like custom selects), use `Controller`:
+
+```typescript
+// src/app/(home)/assets/add/components/AddAssetForm.tsx:105
+const {
+  handleSubmit,
+  control,
+  formState: { errors, isSubmitting },
+  register,
+  watch,
+  setValue,
+} = useForm<FormData>({
+  resolver: zodResolver(ADD_ASSET_SCHEMA),
+  mode: "onSubmit",
+});
+```
+
+**Using Controller for custom components:**
+
+```typescript
+import { Controller } from "react-hook-form";
+import { Select } from "@/components";
+
+<Controller
+  name="parent_site.id"
+  control={control}
+  render={({ field }) => (
+    <Select
+      value={field.value}
+      onValueChange={field.onChange}
+      placeholder="Select site"
+    >
+      {sites.map((site) => (
+        <SelectItem key={site.id} value={site.id}>
+          {site.name}
+        </SelectItem>
+      ))}
+    </Select>
+  )}
+/>
+{errors.parent_site?.id && (
+  <span className="text-red-500">
+    {errors.parent_site.id.message}
+  </span>
+)}
+```
+
+### Form State Methods
+
+<Tabs>
+  <Tab title="register">
+    Register input fields with validation:
+    
+    ```typescript
+    <input {...register("fieldName")} />
+    
+    // With validation
+    <input {...register("email", {
+      required: "Email is required",
+      pattern: {
+        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+        message: "Invalid email address"
+      }
+    })} />
+    ```
+  </Tab>
+  
+  <Tab title="watch">
+    Watch field values for conditional rendering:
+    
+    ```typescript
+    const selectedSiteId = watch("parent_site.id");
+    const currentAssigneeId = watch("assignee.id");
+    
+    // Use watched values
+    const filteredUsers = useMemo(() => {
+      if (!selectedSiteId) return users;
+      const selectedSite = sites.find(site => site.id === selectedSiteId);
+      return users.filter(user => 
+        user.organization?.id === selectedSite?.organization?.id
+      );
+    }, [selectedSiteId, sites, users]);
+    ```
+  </Tab>
+  
+  <Tab title="setValue">
+    Programmatically set field values:
+    
+    ```typescript
+    // Set single field
+    setValue("parent_site.id", siteId);
+    
+    // Set with options
+    setValue("parent_site.id", siteId, {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    
+    // Clear field
+    setValue("assignee.id", "");
+    ```
+  </Tab>
+  
+  <Tab title="errors">
+    Access validation errors:
+    
+    ```typescript
+    {errors.email && (
+      <span className="text-red-500">
+        {errors.email.message}
+      </span>
+    )}
+    
+    // Nested field errors
+    {errors.parent_site?.id && (
+      <span className="text-red-500">
+        {errors.parent_site.id.message}
+      </span>
+    )}
+    ```
+  </Tab>
+  
+  <Tab title="formState">
+    Access form state:
+    
+    ```typescript
+    const {
+      errors,          // Validation errors
+      isSubmitting,    // Form is submitting
+      isSubmitted,     // Form was submitted
+      isValid,         // Form is valid
+      isDirty,         // Form has changes
+      dirtyFields,     // Which fields changed
+      touchedFields,   // Which fields were touched
+    } = formState;
+    ```
+  </Tab>
+</Tabs>
+
+## Zod Schemas
+
+Zod provides runtime validation with TypeScript type inference.
+
+### Schema Structure
+
+All validation schemas are in `src/schema/`:
+
+```
+src/schema/
+├── shared.ts            # Common validation helpers
+├── auth.ts              # Authentication schemas
+├── assets.ts            # Asset validation
+├── alarms.ts            # Alarm validation
+├── samples.ts           # Sample validation
+└── ...
+```
+
+### Shared Schema Helpers
+
+Reusable validation functions:
+
+```typescript
+// src/schema/shared.ts:4
+export function getOptionalStringSchema() {
+  return z.string().optional().nullable();
+}
+
+export function getRequiredStringSchema(
+  label: string = "Field",
+  message?: string
+) {
+  return z.string().min(1, message || `${label} is required`);
+}
+
+export function getRequiredNumberSchema(label: string = "Field") {
+  return z.number().min(1, `${label} is required`);
+}
+
+export function getRequiredEmailSchema(label: string = "Email") {
+  return getRequiredStringSchema(label).refine(
+    (val) => isEmail(val),
+    "Invalid email"
+  );
+}
+
+export const createPasswordSchema = (label: string = "Password") =>
+  z
+    .object({
+      password: z
+        .string()
+        .min(8, `${label} must be at least 8 characters`)
+        .regex(/\d/, `${label} must contain at least one number`)
+        .regex(/[A-Z]/, `${label} must contain at least one uppercase letter`)
+        .regex(
+          /[!@#$%^&*()]/,
+          `${label} must contain at least one special character`
+        ),
+      confirmPassword: z
+        .string()
+        .min(8, `${label} must be at least 8 characters`),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      path: ["confirmPassword"],
+      message: `${label} do not match`,
+    });
+```
+
+### Example Schema: Assets
+
+```typescript
+// src/schema/assets.ts:4
+import { z } from "zod";
+import { getOptionalStringSchema, getRequiredStringSchema } from "./shared";
+
+export const ADD_ASSET_SCHEMA = z.object({
+  name: getRequiredStringSchema("Name"),
+  tag: getRequiredStringSchema("Tag"),
+  parent_site: z.object({
+    id: getRequiredStringSchema("Parent site ID"),
+  }),
+  type: getRequiredStringSchema("Type"),
+  equipment_class: getOptionalStringSchema(),
+  manufacturer: getOptionalStringSchema(),
+  is_modified: z.boolean().optional(),
+  model_number: getRequiredStringSchema("Model number"),
+  serial_number: getRequiredStringSchema("Serial number"),
+  criticality_level: getRequiredStringSchema("Critical level"),
+  operating_hours: getRequiredStringSchema("Operating hours"),
+  commissioned_date: getRequiredStringSchema("Commissioned date"),
+  status: getRequiredStringSchema("Status"),
+  maintenance_strategy: getRequiredStringSchema("Maintenance strategy"),
+  last_performed_maintenance: getRequiredStringSchema(
+    "Last performed maintenance"
+  ),
+  major_overhaul: getRequiredStringSchema("Major overhaul date"),
+  last_date_overhaul: getRequiredStringSchema("Last overhaul date"),
+  assignee: z.object({
+    id: getRequiredStringSchema("Assignee ID"),
+  }),
+  power_rating: getRequiredStringSchema("Power rating (Kw)"),
+  speed: getRequiredStringSchema("Speed (RPM)"),
+  capacity: getRequiredStringSchema("Capacity (m3/h)"),
+  datasheet: z
+    .object({
+      file_url: z.string().url("Please enter a valid URL").optional(),
+      file_name: z.string().min(1, "File name is required"),
+      uploaded_at: z.string().min(1, "Uploaded at is required"),
+    })
+    .optional(),
+});
+
+export type AddAssetPayload = z.infer<typeof ADD_ASSET_SCHEMA>;
+```
+
+### Example Schema: Authentication
+
+```typescript
+// src/schema/auth.ts:8
+import z from "zod";
+import {
+  getRequiredEmailSchema,
+  getRequiredStringSchema,
+  getOptionalStringSchema,
+} from "./shared";
+
+export const SIGN_UP_STEP_1_SCHEMA = z.object({
+  user: z.object({
+    first_name: getRequiredStringSchema("First name"),
+    last_name: getRequiredStringSchema("Last name"),
+    email: getRequiredEmailSchema("Email"),
+  }),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/\d/, "Password must contain at least one number")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(
+      /[!@#$%^&*()]/,
+      "Password must contain at least one special character"
+    ),
+});
+
+export const SIGN_UP_STEP_2_SCHEMA = z.object({
+  organization: z.object({
+    name: getRequiredStringSchema("Organization name"),
+    industry: getRequiredStringSchema("Industry"),
+    team_strength: getRequiredStringSchema("Team strength"),
+  }),
+});
+
+export const SIGN_UP_FULL_SCHEMA = z.object({
+  user: SIGN_UP_STEP_1_SCHEMA.shape.user,
+  organization: SIGN_UP_STEP_2_SCHEMA.shape.organization.extend({
+    logo_url: getOptionalStringSchema(),
+  }),
+  password: getRequiredStringSchema("Password"),
+});
+```
+
+## Form Patterns
+
+### Complete Form Example
+
+Here's a real form from MicroCBM:
+
+```typescript
+// src/app/(home)/assets/add/components/AddAssetForm.tsx:89
+export const AddAssetForm = ({
+  sites,
+  users,
+  organizations,
+}: {
+  sites: Sites[];
+  users: USER_TYPE[];
+  organizations: Organization[];
+}) => {
+  const router = useRouter();
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [datasheetFile, setDatasheetFile] = useState<File | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<
+    string | null
+  >(null);
+
+  const {
+    handleSubmit,
+    control,
+    formState: { errors, isSubmitting },
+    register,
+    watch,
+    setValue,
+  } = useForm<FormData>({
+    resolver: zodResolver(ADD_ASSET_SCHEMA),
+    mode: "onSubmit",
+  });
+
+  const selectedSiteId = watch("parent_site.id");
+  const currentAssigneeId = watch("assignee.id");
+  const previousOrganizationRef = useRef<string | null>(null);
+
+  // Filter sites based on selected organization
+  const filteredSites = React.useMemo(() => {
+    if (!selectedOrganizationId) return sites;
+    return sites.filter(
+      (site) => site.organization?.id === selectedOrganizationId
+    );
+  }, [selectedOrganizationId, sites]);
+
+  // Clear site when organization changes
+  React.useEffect(() => {
+    if (
+      previousOrganizationRef.current !== selectedOrganizationId &&
+      previousOrganizationRef.current !== null
+    ) {
+      setValue("parent_site.id", "", { shouldDirty: false });
+    }
+    previousOrganizationRef.current = selectedOrganizationId;
+  }, [selectedOrganizationId, setValue]);
+
+  // Filter users based on selected site's organization
+  const filteredUsers = React.useMemo(() => {
+    if (!selectedSiteId) return users;
+
+    const selectedSite = sites.find((site) => site.id === selectedSiteId);
+    if (!selectedSite?.organization?.id) return users;
+
+    return users.filter(
+      (user) => user.organization?.id === selectedSite.organization.id
+    );
+  }, [selectedSiteId, sites, users]);
+
+  // Clear assignee if current assignee is not in filtered users
+  React.useEffect(() => {
+    if (currentAssigneeId && filteredUsers.length > 0) {
+      const isAssigneeValid = filteredUsers.some(
+        (user) => user.id === currentAssigneeId
+      );
+      if (!isAssigneeValid) {
+        setValue("assignee.id", "");
+      }
+    }
+  }, [filteredUsers, currentAssigneeId, setValue]);
+  
+  // ... form JSX
+};
+```
+
+<Note>
+  This form demonstrates:
+  - Schema validation with Zod
+  - Watching fields for conditional logic
+  - Cascading dropdowns (organization → site → user)
+  - Automatic field clearing on dependency changes
+  - File upload integration
+</Note>
+
+### Conditional Validation
+
+Validation that depends on other fields:
+
+```typescript
+const schema = z.object({
+  hasAlternateEmail: z.boolean(),
+  email: z.string().email(),
+  alternateEmail: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.hasAlternateEmail) {
+      return data.alternateEmail && data.alternateEmail.includes("@");
+    }
+    return true;
+  },
+  {
+    message: "Alternate email is required when checkbox is selected",
+    path: ["alternateEmail"],
+  }
+);
+```
+
+### Array Validation
+
+Validating arrays of objects:
+
+```typescript
+const schema = z.object({
+  tags: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string().min(1, "Tag name is required"),
+    })
+  ).min(1, "At least one tag is required"),
+});
+```
+
+### Union Types
+
+Validating different structures:
+
+```typescript
+const schema = z.object({
+  contactMethod: z.enum(["email", "phone"]),
+  contact: z.union([
+    z.string().email(),
+    z.string().regex(/^\d{10}$/),
+  ]),
+});
+```
+
+## Form Submission
+
+### With Server Actions
+
+Submit forms using Next.js Server Actions:
+
+```typescript
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { addAssetService } from "@/app/actions";
+
+function AssetForm() {
+  const router = useRouter();
+  const { handleSubmit, register, formState } = useForm({
+    resolver: zodResolver(ADD_ASSET_SCHEMA),
+  });
+  
+  const onSubmit = async (data: FormData) => {
+    try {
+      const result = await addAssetService(data);
+      
+      if (result.success) {
+        toast.success("Asset created successfully");
+        router.push("/assets");
+      } else {
+        toast.error(result.message || "Failed to create asset");
+      }
+    } catch (error) {
+      toast.error("An error occurred");
+      console.error(error);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {/* Form fields */}
+      <button type="submit" disabled={formState.isSubmitting}>
+        {formState.isSubmitting ? "Creating..." : "Create Asset"}
+      </button>
+    </form>
+  );
+}
+```
+
+### With Toast Notifications
+
+Provide user feedback with toast notifications:
+
+```typescript
+import { toast } from "sonner";
+
+const onSubmit = async (data: FormData) => {
+  try {
+    await createAsset(data);
+    toast.success("Asset created successfully");
+  } catch (error) {
+    if (error instanceof Error) {
+      toast.error(error.message);
+    } else {
+      toast.error("An unexpected error occurred");
+    }
+  }
+};
+```
+
+## Error Handling
+
+### Displaying Errors
+
+<Tabs>
+  <Tab title="Inline Errors">
+    Display errors next to fields:
+    
+    ```typescript
+    <div>
+      <label>Email</label>
+      <input {...register("email")} />
+      {errors.email && (
+        <span className="text-sm text-red-500">
+          {errors.email.message}
+        </span>
+      )}
+    </div>
+    ```
+  </Tab>
+  
+  <Tab title="Error Summary">
+    Show all errors at once:
+    
+    ```typescript
+    {Object.keys(errors).length > 0 && (
+      <div className="bg-red-50 border border-red-200 p-4 rounded">
+        <h3 className="font-semibold text-red-800">Please fix the following errors:</h3>
+        <ul className="list-disc list-inside">
+          {Object.entries(errors).map(([field, error]) => (
+            <li key={field} className="text-red-600">
+              {error.message}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    ```
+  </Tab>
+  
+  <Tab title="Server Errors">
+    Handle server-side validation errors:
+    
+    ```typescript
+    const [serverError, setServerError] = useState<string | null>(null);
+    
+    const onSubmit = async (data: FormData) => {
+      setServerError(null);
+      try {
+        const result = await createAsset(data);
+        if (!result.success) {
+          setServerError(result.message);
+        }
+      } catch (error) {
+        setServerError("An unexpected error occurred");
+      }
+    };
+    
+    return (
+      <form onSubmit={handleSubmit(onSubmit)}>
+        {serverError && (
+          <div className="bg-red-50 p-4 rounded">
+            {serverError}
+          </div>
+        )}
+        {/* Form fields */}
+      </form>
+    );
+    ```
+  </Tab>
+</Tabs>
+
+### Custom Error Messages
+
+Provide user-friendly error messages:
+
+```typescript
+const schema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password is too long")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+      "Password must contain uppercase, lowercase, number, and special character"
+    ),
+});
+```
+
+## File Upload Validation
+
+Validate file uploads:
+
+```typescript
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+const schema = z.object({
+  file: z
+    .custom<File>()
+    .refine((file) => file?.size <= MAX_FILE_SIZE, "File size must be less than 5MB")
+    .refine(
+      (file) => ACCEPTED_FILE_TYPES.includes(file?.type),
+      "Only .jpg, .png, and .webp files are accepted"
+    ),
+});
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Use shared schema helpers">
+    Leverage `getRequiredStringSchema`, `getOptionalStringSchema`, etc. for consistency:
+    
+    ```typescript
+    import { getRequiredStringSchema, getRequiredEmailSchema } from "@/schema/shared";
+    
+    const schema = z.object({
+      name: getRequiredStringSchema("Name"),
+      email: getRequiredEmailSchema(),
+    });
+    ```
+  </Step>
+  
+  <Step title="Infer TypeScript types from schemas">
+    Let Zod generate your types automatically:
+    
+    ```typescript
+    const schema = z.object({ name: z.string() });
+    type FormData = z.infer<typeof schema>;
+    // FormData is { name: string }
+    ```
+  </Step>
+  
+  <Step title="Set validation mode appropriately">
+    Choose when validation runs:
+    
+    ```typescript
+    useForm({
+      mode: "onSubmit",    // Validate on submit (default)
+      mode: "onChange",    // Validate on every change
+      mode: "onBlur",      // Validate when field loses focus
+      mode: "onTouched",   // Validate after field is touched
+    });
+    ```
+  </Step>
+  
+  <Step title="Use Controller for custom components">
+    For components that don't expose a ref (custom selects, date pickers), use `Controller`.
+  </Step>
+  
+  <Step title="Provide helpful error messages">
+    Error messages should guide users to fix the problem:
+    
+    ```typescript
+    // Bad
+    z.string().min(8)
+    
+    // Good
+    z.string().min(8, "Password must be at least 8 characters")
+    ```
+  </Step>
+  
+  <Step title="Handle loading states">
+    Show loading indicators during submission:
+    
+    ```typescript
+    <button type="submit" disabled={isSubmitting}>
+      {isSubmitting ? "Submitting..." : "Submit"}
+    </button>
+    ```
+  </Step>
+</Steps>
+
+## Testing Forms
+
+Test form validation:
+
+```typescript
+import { ADD_ASSET_SCHEMA } from "@/schema";
+
+// Valid data
+const validData = {
+  name: "Pump 101",
+  tag: "P-101",
+  parent_site: { id: "site-123" },
+  // ... other required fields
+};
+
+const result = ADD_ASSET_SCHEMA.safeParse(validData);
+console.log(result.success); // true
+
+// Invalid data
+const invalidData = {
+  name: "", // Empty string
+  tag: "P-101",
+};
+
+const errorResult = ADD_ASSET_SCHEMA.safeParse(invalidData);
+console.log(errorResult.success); // false
+console.log(errorResult.error.issues); // Array of validation errors
+```
+
+## Common Patterns
+
+<AccordionGroup>
+  <Accordion title="Cascading Dropdowns">
+    Filter options based on previous selections:
+    
+    ```typescript
+    const selectedCountry = watch("country");
+    
+    const filteredStates = useMemo(() => {
+      if (!selectedCountry) return [];
+      return states.filter(state => state.countryId === selectedCountry);
+    }, [selectedCountry, states]);
+    
+    // Clear dependent field when parent changes
+    useEffect(() => {
+      setValue("state", "");
+    }, [selectedCountry, setValue]);
+    ```
+  </Accordion>
+  
+  <Accordion title="Dynamic Form Fields">
+    Add/remove fields dynamically:
+    
+    ```typescript
+    import { useFieldArray } from "react-hook-form";
+    
+    const { fields, append, remove } = useFieldArray({
+      control,
+      name: "tags",
+    });
+    
+    return (
+      <>
+        {fields.map((field, index) => (
+          <div key={field.id}>
+            <input {...register(`tags.${index}.name`)} />
+            <button type="button" onClick={() => remove(index)}>
+              Remove
+            </button>
+          </div>
+        ))}
+        <button type="button" onClick={() => append({ name: "" })}>
+          Add Tag
+        </button>
+      </>
+    );
+    ```
+  </Accordion>
+  
+  <Accordion title="Multi-Step Forms">
+    Break complex forms into steps:
+    
+    ```typescript
+    const [step, setStep] = useState(1);
+    
+    const onSubmit = async (data: FormData) => {
+      if (step < 3) {
+        setStep(step + 1);
+      } else {
+        // Final submission
+        await saveData(data);
+      }
+    };
+    
+    return (
+      <form onSubmit={handleSubmit(onSubmit)}>
+        {step === 1 && <Step1Fields register={register} errors={errors} />}
+        {step === 2 && <Step2Fields register={register} errors={errors} />}
+        {step === 3 && <Step3Fields register={register} errors={errors} />}
+        
+        <button type="submit">
+          {step < 3 ? "Next" : "Submit"}
+        </button>
+      </form>
+    );
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Schema Reference" icon="shield-check" href="/api/utilities/validators">
+    Explore all validation schemas
+  </Card>
+  <Card title="Component Library" icon="puzzle-piece" href="/components/form-inputs">
+    Browse form components
+  </Card>
+</CardGroup>

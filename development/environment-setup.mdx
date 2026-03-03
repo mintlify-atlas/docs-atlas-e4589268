@@ -1,0 +1,443 @@
+---
+title: Environment Setup
+description: Setting up your development environment for MicroCBM
+icon: laptop-code
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={3}>
+  <Card title="Node.js" icon="node-js">
+    Version 20.x or higher
+  </Card>
+  <Card title="npm" icon="box">
+    Version 10.x or higher
+  </Card>
+  <Card title="Git" icon="git">
+    Latest version
+  </Card>
+</CardGroup>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone <repository-url>
+    cd microcbm
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+    
+    This will install all dependencies defined in `package.json`.
+  </Step>
+  
+  <Step title="Configure environment variables">
+    Create a `.env.local` file in the root directory with the required variables:
+    
+    ```bash
+    NEXT_PUBLIC_API_URL=https://your-api-url.com
+    SESSION_SECRET=your-session-secret-key
+    ```
+    
+    <Note>
+      The `NEXT_PUBLIC_API_URL` should point to your backend API. For development, this might be a local server or a staging environment.
+    </Note>
+  </Step>
+  
+  <Step title="Start the development server">
+    ```bash
+    npm run dev
+    ```
+    
+    The application will be available at `http://localhost:3000`.
+  </Step>
+</Steps>
+
+## Environment Variables
+
+### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_API_URL` | Backend API base URL | `https://api.example.com` |
+| `SESSION_SECRET` | Secret key for session encryption | `your-secret-key-here` |
+
+<Warning>
+  Never commit `.env.local` to version control. The `.env.local` file should be added to `.gitignore`.
+</Warning>
+
+### Backend API Considerations
+
+MicroCBM requires a running backend API to function properly. Without a connected backend:
+
+- Authentication pages will render but login will fail
+- Protected pages will show loading states or errors
+- Data-dependent features will not display information
+
+<Note>
+  The backend API hosted on Render's free tier may require 30-60 seconds for cold starts on the first request.
+</Note>
+
+## Package Dependencies
+
+### Core Dependencies
+
+Key packages used in MicroCBM:
+
+```json
+// package.json:12
+{
+  "dependencies": {
+    "next": "15.5.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "@tanstack/react-query": "^5.90.2",
+    "zustand": "^5.0.9",
+    "react-hook-form": "^7.64.0",
+    "zod": "^4.1.11",
+    "@hookform/resolvers": "^5.2.2"
+  }
+}
+```
+
+<Tabs>
+  <Tab title="Next.js">
+    **Next.js 15.5.9** - React framework with App Router
+    
+    - Server Components by default
+    - File-based routing
+    - Built-in API routes
+    - Server Actions support
+  </Tab>
+  
+  <Tab title="React Query">
+    **@tanstack/react-query 5.90.2** - Server state management
+    
+    - Automatic caching and refetching
+    - Optimistic updates
+    - Background synchronization
+    - Pagination support
+  </Tab>
+  
+  <Tab title="Zustand">
+    **zustand 5.0.9** - Global state management
+    
+    - Minimal boilerplate
+    - TypeScript-first
+    - Middleware support
+    - DevTools integration
+  </Tab>
+  
+  <Tab title="React Hook Form">
+    **react-hook-form 7.64.0** - Form state management
+    
+    - Uncontrolled components
+    - Minimal re-renders
+    - Built-in validation
+    - Easy integration with Zod
+  </Tab>
+</Tabs>
+
+### UI Component Libraries
+
+```json
+{
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-select": "^2.1.5",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "recharts": "^3.2.1",
+    "framer-motion": "^12.23.24",
+    "@xyflow/react": "^12.10.1"
+  }
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Radix UI">
+    Unstyled, accessible UI components:
+    - Dialog/Modal
+    - Dropdown Menu
+    - Select
+    - Tabs
+    - Checkbox
+    - Radio Group
+    - Switch
+    - Popover
+    - Scroll Area
+    
+    All Radix components are styled with Tailwind CSS and customized for MicroCBM's design system.
+  </Accordion>
+  
+  <Accordion title="Recharts">
+    Composable charting library built on React components:
+    - Area charts for trend analysis
+    - Bar charts for comparisons
+    - Pie charts for distributions
+    - Line charts for time series data
+    
+    Used extensively in dashboards and analytics pages.
+  </Accordion>
+  
+  <Accordion title="XYFlow">
+    Node-based UI library for building interactive diagrams:
+    - Used for Logic Tree visualization in RCA module
+    - Drag-and-drop node creation
+    - Custom node types
+    - Auto-layout capabilities
+  </Accordion>
+  
+  <Accordion title="Framer Motion">
+    Animation library for React:
+    - Page transitions
+    - Modal animations
+    - Loading states
+    - Interactive feedback
+  </Accordion>
+</AccordionGroup>
+
+## Development Scripts
+
+```json
+// package.json:5
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "update-icons": "node scripts/update-icons.js"
+  }
+}
+```
+
+### Available Commands
+
+<CodeGroup>
+  ```bash Development
+  npm run dev
+  ```
+  
+  ```bash Production Build
+  npm run build
+  ```
+  
+  ```bash Start Production Server
+  npm run start
+  ```
+  
+  ```bash Lint Code
+  npm run lint
+  ```
+  
+  ```bash Update Icons
+  npm run update-icons
+  ```
+</CodeGroup>
+
+<Tabs>
+  <Tab title="dev">
+    Starts the Next.js development server with:
+    - Hot Module Replacement (HMR)
+    - Fast Refresh for instant updates
+    - Error overlay for debugging
+    - Runs on `http://localhost:3000`
+  </Tab>
+  
+  <Tab title="build">
+    Creates an optimized production build:
+    - Compiles TypeScript
+    - Bundles and minifies JavaScript
+    - Optimizes images
+    - Generates static pages where possible
+    
+    <Note>
+      Expected build warnings:
+      - Dynamic routes using `cookies` during static generation (harmless)
+      - `useFormContext` export warning in `CheckboxCells.tsx` (pre-existing issue)
+    </Note>
+  </Tab>
+  
+  <Tab title="start">
+    Starts the production server after building:
+    - Serves the optimized build
+    - Runs on port 3000 by default
+    - Use for production deployment testing
+  </Tab>
+  
+  <Tab title="lint">
+    Runs ESLint to check code quality:
+    - Follows Next.js ESLint configuration
+    - Checks TypeScript types
+    - Enforces code style rules
+  </Tab>
+</Tabs>
+
+## IDE Setup
+
+### VS Code (Recommended)
+
+Recommended extensions:
+
+```json
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "styled-components.vscode-styled-components"
+  ]
+}
+```
+
+### TypeScript Configuration
+
+MicroCBM uses strict TypeScript settings:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+The `@/` path alias allows importing from the `src/` directory:
+
+```typescript
+import { Button } from "@/components";
+import { useContentGuard } from "@/hooks";
+import { Asset } from "@/types";
+```
+
+## Middleware & Security
+
+MicroCBM includes authentication middleware that protects all routes except `/auth/*`:
+
+```typescript
+// src/middleware.ts:1
+import { NextRequest, NextResponse } from "next/server";
+import { ROUTES } from "./utils";
+import { isTokenExpired } from "./libs/jwt";
+
+const publicPaths = new Set([
+  ROUTES.AUTH.LOGIN,
+  ROUTES.AUTH.REGISTER,
+  ROUTES.AUTH.RESET_PASSWORD,
+]);
+
+function isPublicPath(pathname: string): boolean {
+  return publicPaths.has(pathname) || pathname.startsWith("/auth/");
+}
+
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get("token")?.value;
+  const isPublic = isPublicPath(pathname);
+
+  if (token && isTokenExpired(token)) {
+    const response = isPublic
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+    response.cookies.delete("token");
+    response.cookies.delete("userData");
+    return response;
+  }
+
+  if (!isPublic && !token) {
+    return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+  }
+
+  if (isPublic && token) {
+    return NextResponse.redirect(new URL(ROUTES.HOME, req.nextUrl));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/((?!api|_next/static|_next/image|assets|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest).*)",
+  ],
+};
+```
+
+<Note>
+  The middleware excludes static assets, API routes, and public metadata files from authentication checks.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port 3000 already in use">
+    If port 3000 is already occupied:
+    
+    ```bash
+    # Kill the process using port 3000
+    npx kill-port 3000
+    
+    # Or run on a different port
+    PORT=3001 npm run dev
+    ```
+  </Accordion>
+  
+  <Accordion title="Backend API connection errors">
+    If you see API connection errors:
+    
+    1. Verify `NEXT_PUBLIC_API_URL` is correct in `.env.local`
+    2. Check if the backend API is running
+    3. Wait 30-60 seconds for cold start if using Render free tier
+    4. Check browser console for detailed error messages
+  </Accordion>
+  
+  <Accordion title="Module not found errors">
+    If you encounter module resolution errors:
+    
+    ```bash
+    # Clear Next.js cache
+    rm -rf .next
+    
+    # Reinstall dependencies
+    rm -rf node_modules package-lock.json
+    npm install
+    
+    # Restart dev server
+    npm run dev
+    ```
+  </Accordion>
+  
+  <Accordion title="TypeScript errors">
+    For TypeScript compilation issues:
+    
+    ```bash
+    # Check TypeScript configuration
+    npx tsc --noEmit
+    
+    # Restart TypeScript server in VS Code
+    # Command Palette > TypeScript: Restart TS Server
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Understand the codebase organization
+  </Card>
+  <Card title="Routing" icon="route" href="/development/routing">
+    Learn about Next.js App Router patterns
+  </Card>
+</CardGroup>

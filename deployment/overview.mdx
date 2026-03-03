@@ -1,0 +1,259 @@
+---
+title: Deployment Overview
+description: Deploy MicroCBM to production with best practices and platform recommendations
+---
+
+MicroCBM is a Next.js 15 application that can be deployed to any platform supporting Node.js. This guide covers deployment options, requirements, and recommendations.
+
+## Platform Requirements
+
+MicroCBM requires:
+
+- **Node.js**: Version 20 or higher
+- **Package Manager**: npm, yarn, or pnpm
+- **Build Command**: `npm run build`
+- **Start Command**: `npm start`
+- **Port**: 3000 (default)
+
+<Note>
+  MicroCBM is a frontend-only application. It requires a running backend API at the URL specified in `NEXT_PUBLIC_API_URL`.
+</Note>
+
+## Recommended Platforms
+
+### Vercel (Recommended)
+
+Vercel provides the best Next.js deployment experience with zero configuration.
+
+<Steps>
+  <Step title="Connect Repository">
+    Import your repository from GitHub, GitLab, or Bitbucket.
+  </Step>
+  
+  <Step title="Configure Environment Variables">
+    Add required environment variables:
+    - `NEXT_PUBLIC_API_URL`
+    - `SESSION_SECRET`
+  </Step>
+  
+  <Step title="Deploy">
+    Vercel automatically detects Next.js and configures build settings.
+  </Step>
+</Steps>
+
+**Vercel Configuration:**
+
+```json
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs"
+}
+```
+
+### Netlify
+
+Netlify supports Next.js applications with its Next.js Runtime.
+
+**Build Settings:**
+- **Build Command**: `npm run build`
+- **Publish Directory**: `.next`
+- **Functions Directory**: `.netlify/functions`
+
+### AWS Amplify
+
+AWS Amplify provides hosting for Next.js applications with automatic deployments.
+
+**Build Specification:**
+
+```yaml
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm install
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+```
+
+### Docker
+
+For containerized deployments, create a production-optimized Dockerfile.
+
+**Dockerfile:**
+
+```dockerfile
+FROM node:20-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
+```
+
+**docker-compose.yml:**
+
+```yaml
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+    restart: unless-stopped
+```
+
+## Build Configuration
+
+The build process is configured in `package.json`:
+
+```json package.json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "update-icons": "node scripts/update-icons.js"
+  }
+}
+```
+
+<Warning>
+  The build produces expected warnings about dynamic routes using `cookies` during static generation. These warnings are harmless and can be ignored.
+</Warning>
+
+## Environment Setup
+
+Before deploying, ensure all required environment variables are configured. See the [Environment Variables](/deployment/environment-variables) page for details.
+
+## Post-Deployment Checklist
+
+After deploying to production:
+
+<Steps>
+  <Step title="Verify Environment Variables">
+    Test that all environment variables are correctly set and the backend API is reachable.
+  </Step>
+  
+  <Step title="Check Security Headers">
+    Use [securityheaders.com](https://securityheaders.com) to verify security headers are applied.
+  </Step>
+  
+  <Step title="Test Authentication Flow">
+    Complete a full login and OTP verification flow to ensure authentication works.
+  </Step>
+  
+  <Step title="Monitor Performance">
+    Check page load times and Core Web Vitals in production.
+  </Step>
+  
+  <Step title="Review Error Logs">
+    Monitor application logs for any runtime errors.
+  </Step>
+</Steps>
+
+## API Cold Start Considerations
+
+<Note>
+  If your backend API is hosted on a free tier service (e.g., Render), it may need 30-60 seconds to start on the first request after being idle.
+</Note>
+
+To improve the user experience:
+
+1. Add loading states to data-dependent pages
+2. Implement retry logic for API requests
+3. Display helpful messages during cold start periods
+4. Consider upgrading to a paid hosting tier for zero-downtime
+
+## Static Asset Optimization
+
+Next.js automatically optimizes static assets during build:
+
+- **Images**: Optimized using Next.js Image Optimization
+- **JavaScript**: Minified and code-split
+- **CSS**: Minified and extracted
+- **Fonts**: Optimized with next/font
+
+## Monitoring and Analytics
+
+Recommended tools for production monitoring:
+
+- **Vercel Analytics**: Built-in for Vercel deployments
+- **Sentry**: Error tracking and performance monitoring
+- **LogRocket**: Session replay and debugging
+- **Google Analytics**: User behavior tracking
+
+## Continuous Deployment
+
+Set up automatic deployments from your version control system:
+
+1. **Production Branch**: Deploy `main` or `master` branch to production
+2. **Preview Deployments**: Automatically deploy pull requests for testing
+3. **Environment Variables**: Use separate values for preview and production
+
+## Rollback Strategy
+
+Most platforms support instant rollbacks:
+
+- **Vercel**: One-click rollback to any previous deployment
+- **Netlify**: Deploy rollback from Deploys dashboard
+- **AWS Amplify**: Redeploy previous commit from console
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="key" href="/deployment/environment-variables">
+    Configure all required environment variables
+  </Card>
+  <Card title="Security" icon="shield" href="/deployment/security">
+    Review security headers and best practices
+  </Card>
+</CardGroup>

@@ -1,0 +1,227 @@
+---
+title: useContentGuard
+description: Permission-based access control hook for authentication and authorization
+---
+
+The `useContentGuard` hook provides role-based access control (RBAC) by checking user permissions against required permissions. It fetches the user session, retrieves role permissions, and determines whether the current user is authorized to access a resource.
+
+## Import
+
+```typescript
+import { useContentGuard } from "@/hooks";
+```
+
+## Signature
+
+```typescript
+function useContentGuard(
+  permission?: PermissionType | PermissionType[] | string | string[]
+): {
+  isAllowed: boolean;
+  isLoading: boolean;
+  userPermissions: string[];
+  user: SessionUser | null;
+}
+```
+
+## Parameters
+
+<ParamField path="permission" type="PermissionType | PermissionType[] | string | string[]" optional>
+  The permission(s) required to access the protected resource. Can be a single permission string or an array of permissions. Permissions follow the format `"resource:action"` (e.g., `"assets:read"`, `"sites:write"`).
+  
+  If omitted, the hook returns `isAllowed: true` and only provides user information.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="isAllowed" type="boolean">
+  `true` if the user has any of the required permissions or is a SuperAdmin. `false` during loading or if unauthorized.
+</ResponseField>
+
+<ResponseField name="isLoading" type="boolean">
+  `true` while fetching user session and permissions. `false` once data is loaded.
+</ResponseField>
+
+<ResponseField name="userPermissions" type="string[]">
+  Array of permission strings the current user has, formatted as `"resource:action"` (e.g., `["assets:read", "sites:write"]`).
+</ResponseField>
+
+<ResponseField name="user" type="SessionUser | null">
+  The current user session object containing user details and role information. `null` if not authenticated.
+</ResponseField>
+
+## Usage Examples
+
+### Basic Permission Check
+
+Check if a user has permission to access a specific resource:
+
+```tsx
+import { useContentGuard } from "@/hooks";
+
+function AssetPage() {
+  const { isAllowed, isLoading } = useContentGuard("assets:read");
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAllowed) {
+    return <div>Access denied</div>;
+  }
+
+  return <div>Asset content</div>;
+}
+```
+
+### Multiple Permissions (OR Logic)
+
+Check if a user has any of several permissions:
+
+```tsx
+import { useContentGuard } from "@/hooks";
+
+function DashboardTabs() {
+  const { isAllowed: hasSitesPermission } = useContentGuard("sites:read");
+  const { isAllowed: hasAssetsPermission } = useContentGuard("assets:read");
+  const { isAllowed: hasSamplingPointsPermission } = useContentGuard(
+    "sampling_points:read"
+  );
+
+  return (
+    <Tabs>
+      {hasSitesPermission && <Tab>Sites</Tab>}
+      {hasAssetsPermission && <Tab>Assets</Tab>}
+      {hasSamplingPointsPermission && <Tab>Sampling Points</Tab>}
+    </Tabs>
+  );
+}
+```
+
+### Access User Information
+
+Retrieve current user details without permission checks:
+
+```tsx
+import { useContentGuard } from "@/hooks";
+
+function UserProfile() {
+  const { user, userPermissions } = useContentGuard();
+
+  if (!user) {
+    return <div>Not logged in</div>;
+  }
+
+  return (
+    <div>
+      <h2>{user.first_name} {user.last_name}</h2>
+      <p>Role: {user.role}</p>
+      <p>Permissions: {userPermissions.join(", ")}</p>
+    </div>
+  );
+}
+```
+
+### Page Guard Pattern
+
+Used in the `PageGuard` component for route-level protection:
+
+```tsx
+import { useContentGuard } from "@/hooks";
+
+function PageGuard({ children, permissions }) {
+  const { isAllowed, isLoading } = useContentGuard(permissions);
+
+  if (isLoading) return null;
+
+  if (!isAllowed) {
+    throw new Error(
+      "Unauthorized. You do not have the permission to access this resource."
+    );
+  }
+
+  return <>{children}</>;
+}
+```
+
+### Component-Level Guarding
+
+Conditionally render UI elements based on permissions:
+
+```tsx
+import { useContentGuard } from "@/hooks";
+
+function UserTable() {
+  const { userPermissions, user } = useContentGuard();
+  const canEdit = userPermissions.includes("users:write");
+  const canDelete = userPermissions.includes("users:delete");
+
+  return (
+    <table>
+      <tbody>
+        {users.map((userData) => (
+          <tr key={userData.id}>
+            <td>{userData.name}</td>
+            <td>
+              {canEdit && <EditButton />}
+              {canDelete && <DeleteButton />}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+```
+
+## Behavior
+
+### SuperAdmin Override
+
+Users with the `SuperAdmin` role automatically have `isAllowed: true` regardless of specific permissions.
+
+### Testing Mode
+
+When `isTesting` is `true` (from `@/utils/constants`), the hook returns:
+
+```typescript
+{
+  isAllowed: true,
+  isLoading: false,
+  userPermissions: [],
+  user: null
+}
+```
+
+### Permission Format
+
+Permissions are case-insensitive and follow the format `"resource:action"`. Examples:
+
+- `"assets:read"`
+- `"sites:write"`
+- `"users:delete"`
+- `"recommendations:read"`
+
+### Data Flow
+
+1. Fetches user session from `/api/session`
+2. If session contains permissions, uses them directly
+3. Otherwise, fetches permissions from `/api/v1/roles/{role_id}/permissions`
+4. Compares required permissions against user permissions
+5. Returns authorization result
+
+## Notes
+
+<Note>
+  This hook makes network requests on mount. Ensure it's used in Client Components and not called excessively in loops or deeply nested components.
+</Note>
+
+<Warning>
+  During the loading state (`isLoading: true`), `isAllowed` is `false`. Always check `isLoading` before making authorization decisions to avoid flickering or false denials.
+</Warning>
+
+## Related
+
+- [ContentGuard Components](/components/overview) - Pre-built components using this hook
+- [Authentication](/concepts/authentication) - Authentication flow and session management
+- [Type Definitions](/api/types/overview) - SessionUser and PermissionType types

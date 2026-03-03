@@ -1,0 +1,586 @@
+---
+title: Routing
+description: Next.js App Router patterns and routing strategies used in MicroCBM
+icon: route
+---
+
+## Overview
+
+MicroCBM uses Next.js 15 App Router with file-based routing. All routes are defined by the file structure in the `src/app/` directory.
+
+## App Router Fundamentals
+
+### File Conventions
+
+| File | Purpose | Example |
+|------|---------|----------|
+| `page.tsx` | Route page component | `app/assets/page.tsx` → `/assets` |
+| `layout.tsx` | Shared layout for routes | `app/assets/layout.tsx` |
+| `loading.tsx` | Loading UI | `app/assets/loading.tsx` |
+| `error.tsx` | Error boundary | `app/assets/error.tsx` |
+| `not-found.tsx` | 404 page | `app/not-found.tsx` |
+| `route.ts` | API route handler | `app/api/session/route.ts` |
+
+### Server vs Client Components
+
+<Tabs>
+  <Tab title="Server Components">
+    Server Components are the default in Next.js 15. They run on the server and can directly access backend resources.
+    
+    ```typescript
+    // src/app/(home)/assets/page.tsx:1
+    "use server";
+    import React from "react";
+    import { AssetContent, AssetTable, AssetSummary } from "./components";
+    import {
+      getAssetsService,
+      getAssetsAnalyticsService,
+      getSitesService,
+    } from "@/app/actions";
+
+    export default async function AssetsPage({
+      searchParams,
+    }: {
+      searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+    }) {
+      const params = await searchParams;
+      const page = Math.max(1, parseInt(String(params?.page ?? 1), 10) || 1);
+      const limit = Math.max(1, Math.min(100, parseInt(String(params?.limit ?? 10), 10) || 10);
+      const search = typeof params?.search === "string" ? params.search : "";
+
+      const { data: assets, meta } = await getAssetsService({ page, limit, search });
+      const assetsAnalytics = await getAssetsAnalyticsService();
+      const sites = (await getSitesService()).data;
+
+      return (
+        <main className="flex flex-col gap-4">
+          <AssetContent sites={sites} />
+          {assetsAnalytics && <AssetSummary assetsAnalytics={assetsAnalytics} />}
+          <AssetTable data={assets} meta={meta} />
+        </main>
+      );
+    }
+    ```
+    
+    **Benefits:**
+    - Direct data fetching
+    - Zero JavaScript sent to client
+    - SEO-friendly
+    - Reduced bundle size
+  </Tab>
+  
+  <Tab title="Client Components">
+    Client Components require the `"use client"` directive and run in the browser.
+    
+    ```typescript
+    // Example client component
+    "use client";
+    import React, { useState } from "react";
+    import { Button, Modal } from "@/components";
+    
+    export function InteractiveComponent() {
+      const [isOpen, setIsOpen] = useState(false);
+      
+      return (
+        <>
+          <Button onClick={() => setIsOpen(true)}>Open Modal</Button>
+          <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
+            Content
+          </Modal>
+        </>
+      );
+    }
+    ```
+    
+    **Use Client Components for:**
+    - Event listeners (`onClick`, `onChange`)
+    - State hooks (`useState`, `useReducer`)
+    - Effect hooks (`useEffect`, `useLayoutEffect`)
+    - Browser APIs (localStorage, window)
+    - Custom hooks that use client-only features
+  </Tab>
+</Tabs>
+
+<Warning>
+  Important: Do NOT add `loading.tsx` to `src/app/(home)/` as it breaks the build due to static analysis behavior with `useSearchParams()`.
+</Warning>
+
+## Route Groups
+
+Route groups organize routes without affecting the URL structure. They're created using parentheses `(group-name)`.
+
+### `(home)` Route Group
+
+All authenticated routes are under the `(home)` group:
+
+```
+src/app/(home)/
+├── layout.tsx              # Shared layout for all authenticated pages
+├── page.tsx                # Dashboard (/) 
+├── assets/                 # /assets
+├── alarms/                 # /alarms
+├── samples/                # /samples
+└── recommendations/        # /recommendations
+```
+
+The layout provides:
+- Navbar
+- Sidebar navigation
+- Authentication guard
+- Consistent page structure
+
+```typescript
+// src/app/(home)/layout.tsx:1
+"use server";
+import { RouteGuard } from "@/components/content-guard";
+import Navbar from "@/components/shared/Navbar";
+import Sidebar from "@/components/shared/Sidebar";
+import { cookies } from "next/headers";
+import { SessionUser } from "@/types";
+
+function parseUserData(raw: string | undefined): SessionUser | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SessionUser;
+  } catch {
+    return null;
+  }
+}
+
+export default async function HomeLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const user = parseUserData((await cookies()).get("userData")?.value);
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+
+      <section className="flex-1 flex pt-[53.35px]">
+        <Sidebar user={user} />
+        <div className="flex-1 ml-64 overflow-y-auto h-[calc(100vh-64px)]">
+          <div className="p-6 bg-gray-50 min-h-full">
+            <RouteGuard loadingFallback={<div className="flex min-h-[200px] items-center justify-center text-sm text-gray-500">Loading…</div>}>
+              {children}
+            </RouteGuard>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+```
+
+<Note>
+  Do NOT remove `"use server"` from the layout - it affects how Next.js treats the page tree during build.
+</Note>
+
+## Dynamic Routes
+
+Dynamic routes use bracket notation for route parameters.
+
+### Single Dynamic Segment
+
+```
+src/app/(home)/assets/edit/[id]/page.tsx  # /assets/edit/123
+src/app/(home)/rca/[id]/page.tsx          # /rca/abc-def-ghi
+```
+
+Accessing route parameters:
+
+```typescript
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function EditAssetPage({ params }: PageProps) {
+  const { id } = await params;
+  
+  // Fetch data using the id
+  const asset = await getAssetById(id);
+  
+  return <EditAssetForm asset={asset} />;
+}
+```
+
+### Catch-all Segments
+
+For routes with multiple dynamic segments:
+
+```typescript
+// src/app/blog/[...slug]/page.tsx
+// Matches:
+//   /blog/a
+//   /blog/a/b
+//   /blog/a/b/c
+
+interface PageProps {
+  params: Promise<{ slug: string[] }>;
+}
+
+export default async function BlogPost({ params }: PageProps) {
+  const { slug } = await params;
+  // slug is an array: ["a", "b", "c"]
+}
+```
+
+## Search Parameters
+
+Access URL query parameters in Server Components:
+
+```typescript
+// src/app/(home)/recommendations/page.tsx:23
+export default async function RecommendationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const [recommendations, sites, assets, recommendationAnalytics, users, samplingPoints] =
+    await Promise.all([
+      getRecommendationsService(params).catch(() => [] as Recommendation[]),
+      getSitesService().then((r) => r.data).catch(() => []),
+      getAssetsService().then((r) => r.data).catch(() => []),
+      getRecommendationAnalyticsService().catch(() => []),
+      getUsersService().catch(() => []),
+      getSamplingPointsService().then((r) => r.data).catch(() => []),
+    ]);
+
+  return (
+    <main className="flex flex-col gap-4">
+      <RecommendationContent />
+      <RecommendationsSummary
+        recommendationAnalytics={recommendationAnalytics}
+      />
+      <RecommendationTrend recommendations={recommendations} />
+      <RecommendationFilters
+        sites={sites}
+        assets={assets}
+        samplingPoints={samplingPoints}
+        users={users}
+      />
+      <RecommendationTable
+        recommendations={recommendations}
+        assets={assets}
+        sites={sites}
+      />
+    </main>
+  );
+}
+```
+
+### URL State Hook
+
+For client-side URL state management, use the custom `useUrlState` hook:
+
+```typescript
+// src/hooks/useUrlState.ts:1
+"use client";
+
+import { useCallback, useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+export function useUrlState(key: string, defaultValue = "") {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const value = useMemo(() => {
+    return searchParams?.get(key) ?? defaultValue;
+  }, [searchParams, key, defaultValue]);
+
+  const setValue = useCallback(
+    (newValue: string) => {
+      const params = new URLSearchParams(searchParams?.toString());
+
+      if (newValue) {
+        params.set(key, newValue);
+      } else {
+        params.delete(key);
+      }
+
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, key, pathname, router]
+  );
+
+  return [value, setValue] as const;
+}
+```
+
+**Usage example:**
+
+```typescript
+"use client";
+import { useUrlState } from "@/hooks";
+
+function FilterComponent() {
+  const [status, setStatus] = useUrlState("status", "all");
+  
+  return (
+    <select value={status} onChange={(e) => setStatus(e.target.value)}>
+      <option value="all">All</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+    </select>
+  );
+}
+```
+
+## Navigation
+
+### Link Component
+
+Use Next.js `Link` for client-side navigation:
+
+```typescript
+import Link from "next/link";
+
+<Link href="/assets">
+  View Assets
+</Link>
+
+// With dynamic routes
+<Link href={`/assets/edit/${asset.id}`}>
+  Edit Asset
+</Link>
+```
+
+### Programmatic Navigation
+
+Use the `useRouter` hook for navigation in client components:
+
+```typescript
+"use client";
+import { useRouter } from "next/navigation";
+
+function CreateAssetButton() {
+  const router = useRouter();
+  
+  const handleCreate = async () => {
+    // Create asset logic
+    const newAsset = await createAsset(data);
+    
+    // Navigate to the new asset
+    router.push(`/assets/edit/${newAsset.id}`);
+  };
+  
+  return <button onClick={handleCreate}>Create Asset</button>;
+}
+```
+
+<Tabs>
+  <Tab title="router.push()">
+    Navigate to a new route and add it to the history stack:
+    
+    ```typescript
+    router.push("/assets");
+    ```
+  </Tab>
+  
+  <Tab title="router.replace()">
+    Navigate to a new route without adding to the history stack:
+    
+    ```typescript
+    router.replace("/assets");
+    ```
+  </Tab>
+  
+  <Tab title="router.back()">
+    Navigate to the previous page:
+    
+    ```typescript
+    router.back();
+    ```
+  </Tab>
+  
+  <Tab title="router.refresh()">
+    Refresh the current route and re-fetch data:
+    
+    ```typescript
+    router.refresh();
+    ```
+  </Tab>
+</Tabs>
+
+## Middleware
+
+MicroCBM uses middleware for authentication and route protection:
+
+```typescript
+// src/middleware.ts:15
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get("token")?.value;
+  const isPublic = isPublicPath(pathname);
+
+  if (token && isTokenExpired(token)) {
+    const response = isPublic
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+    response.cookies.delete("token");
+    response.cookies.delete("userData");
+    return response;
+  }
+
+  if (!isPublic && !token) {
+    return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+  }
+
+  if (isPublic && token) {
+    return NextResponse.redirect(new URL(ROUTES.HOME, req.nextUrl));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/((?!api|_next/static|_next/image|assets|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest).*)",
+  ],
+};
+```
+
+**Middleware flow:**
+
+<Steps>
+  <Step title="Check token existence">
+    Verify if authentication token exists in cookies
+  </Step>
+  
+  <Step title="Validate token expiry">
+    Check if token is expired and clear cookies if necessary
+  </Step>
+  
+  <Step title="Route protection">
+    Redirect unauthenticated users from protected routes to login
+  </Step>
+  
+  <Step title="Authenticated redirects">
+    Redirect authenticated users away from auth pages to home
+  </Step>
+</Steps>
+
+## API Routes
+
+API routes handle backend requests:
+
+```
+src/app/api/
+├── session/
+│   └── route.ts         # GET /api/session
+└── files/
+    └── presigned/
+        └── route.ts     # GET /api/files/presigned
+```
+
+**Example API route:**
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+export async function GET(request: NextRequest) {
+  const cookieStore = await cookies();
+  const userData = cookieStore.get("userData")?.value;
+  
+  if (!userData) {
+    return NextResponse.json(
+      { error: "Not authenticated" },
+      { status: 401 }
+    );
+  }
+  
+  return NextResponse.json({
+    user: JSON.parse(userData),
+  });
+}
+```
+
+## Metadata & SEO
+
+Define metadata for pages:
+
+```typescript
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Assets",
+  description: "Manage your asset inventory",
+};
+
+export default function AssetsPage() {
+  return <main>...</main>;
+}
+```
+
+### Dynamic Metadata
+
+Generate metadata based on route parameters:
+
+```typescript
+import type { Metadata } from "next";
+
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const asset = await getAssetById(id);
+  
+  return {
+    title: `Edit ${asset.name}`,
+    description: `Edit asset: ${asset.tag}`,
+  };
+}
+```
+
+<Note>
+  All pages use the title template `"%s | MicroCBM"` defined in the root layout.
+</Note>
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Server Components by default">
+    Only use Client Components when you need interactivity, state, or browser APIs.
+  </Step>
+  
+  <Step title="Colocate data fetching">
+    Fetch data in the component that needs it rather than passing through multiple layers.
+  </Step>
+  
+  <Step title="Parallel data fetching">
+    Use `Promise.all()` to fetch multiple resources in parallel:
+    
+    ```typescript
+    const [assets, sites, users] = await Promise.all([
+      getAssetsService(),
+      getSitesService(),
+      getUsersService(),
+    ]);
+    ```
+  </Step>
+  
+  <Step title="Handle loading states">
+    Wrap async operations in Suspense boundaries or provide loading states.
+  </Step>
+  
+  <Step title="Use URL state for filters">
+    Store filter state in URL parameters for shareable links and browser history support.
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="State Management" icon="database" href="/development/state-management">
+    Learn about Zustand stores and React Query
+  </Card>
+  <Card title="Forms & Validation" icon="square-check" href="/development/forms-validation">
+    Explore React Hook Form and Zod schemas
+  </Card>
+</CardGroup>

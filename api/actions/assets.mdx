@@ -1,0 +1,673 @@
+---
+title: Asset Management Actions
+description: Server Actions for managing assets, sites, and analytics
+---
+
+## Overview
+
+Asset management actions provide CRUD operations for assets and sites, plus analytics endpoints for dashboard metrics. All functions are located in `src/app/actions/inventory.ts`.
+
+## Asset Operations
+
+### getAssetsService
+
+Retrieves a paginated list of assets with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="search" type="string" optional>
+    Search term for filtering assets
+  </ParamField>
+  
+  <ParamField path="[key: string]" type="string | number | string[]" optional>
+    Additional filter parameters (e.g., site_id, status)
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="Asset[]">
+  Array of asset objects
+</ResponseField>
+
+<ResponseField name="meta" type="AssetsMeta">
+  Pagination metadata
+  
+  <ResponseField name="page" type="number">
+    Current page number
+  </ResponseField>
+  
+  <ResponseField name="limit" type="number">
+    Items per page
+  </ResponseField>
+  
+  <ResponseField name="total" type="number">
+    Total number of assets
+  </ResponseField>
+  
+  <ResponseField name="total_pages" type="number">
+    Total number of pages
+  </ResponseField>
+  
+  <ResponseField name="has_next" type="boolean">
+    Whether there is a next page
+  </ResponseField>
+  
+  <ResponseField name="has_prev" type="boolean">
+    Whether there is a previous page
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+"use server";
+import { getAssetsService } from "@/app/actions";
+
+export default async function AssetsPage({ searchParams }) {
+  const params = await searchParams;
+  const page = parseInt(String(params?.page ?? 1), 10);
+  const limit = parseInt(String(params?.limit ?? 10), 10);
+  const search = typeof params?.search === "string" ? params.search : "";
+
+  const { data: assets, meta } = await getAssetsService({ 
+    page, 
+    limit, 
+    search 
+  });
+
+  return <AssetTable data={assets} meta={meta} />;
+}
+```
+
+```typescript With Filters
+import { getAssetsService } from "@/app/actions";
+
+// Filter by site and status
+const { data: assets, meta } = await getAssetsService({
+  page: 1,
+  limit: 20,
+  site_id: "site-123",
+  status: "active",
+});
+```
+
+```typescript Error Handling
+import { getAssetsService } from "@/app/actions";
+
+const { data: assets, meta } = await getAssetsService();
+
+// Returns empty array on 403 (permission denied)
+if (assets.length === 0 && meta.total === 0) {
+  console.log("No assets found or access denied");
+}
+```
+
+</CodeGroup>
+
+<Note>
+On permission errors (403), this function returns an empty data array with zero total instead of throwing an error.
+</Note>
+
+---
+
+### getAssetService
+
+Retrieves a single asset by ID.
+
+<ParamField path="id" type="string" required>
+  Unique asset identifier
+</ParamField>
+
+<ResponseField name="data" type="Asset">
+  Complete asset object with all fields
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getAssetService } from "@/app/actions";
+
+const asset = await getAssetService("asset-123");
+
+console.log(asset.name);
+console.log(asset.serial_number);
+console.log(asset.assignee.first_name);
+```
+
+```typescript With Error Handling
+import { getAssetService } from "@/app/actions";
+
+try {
+  const asset = await getAssetService(assetId);
+  return <AssetDetails asset={asset} />;
+} catch (error) {
+  console.error("Error fetching asset:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### addAssetService
+
+Creates a new asset.
+
+<ParamField path="payload" type="AddAssetPayload" required>
+  Asset creation data
+  
+  <ParamField path="name" type="string" required>
+    Asset name
+  </ParamField>
+  
+  <ParamField path="tag" type="string" required>
+    Asset tag/identifier
+  </ParamField>
+  
+  <ParamField path="parent_site" type="object" required>
+    <ParamField path="id" type="string" required>
+      Parent site ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="type" type="string" required>
+    Asset type (e.g., "Pump", "Motor", "Compressor")
+  </ParamField>
+  
+  <ParamField path="model_number" type="string" required>
+    Manufacturer model number
+  </ParamField>
+  
+  <ParamField path="serial_number" type="string" required>
+    Serial number
+  </ParamField>
+  
+  <ParamField path="criticality_level" type="string" required>
+    Criticality level (e.g., "high", "medium", "low")
+  </ParamField>
+  
+  <ParamField path="status" type="string" required>
+    Operational status
+  </ParamField>
+  
+  <ParamField path="assignee" type="object" required>
+    <ParamField path="id" type="string" required>
+      Assigned user ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="operating_hours" type="string" required>
+    Current operating hours
+  </ParamField>
+  
+  <ParamField path="commissioned_date" type="string" required>
+    Date asset was commissioned
+  </ParamField>
+  
+  <ParamField path="maintenance_strategy" type="string" required>
+    Maintenance strategy
+  </ParamField>
+  
+  <ParamField path="power_rating" type="string" required>
+    Power rating in Kw
+  </ParamField>
+  
+  <ParamField path="speed" type="string" required>
+    Speed in RPM
+  </ParamField>
+  
+  <ParamField path="capacity" type="string" required>
+    Capacity in m3/h
+  </ParamField>
+  
+  <ParamField path="datasheet" type="object" optional>
+    Datasheet file information
+    
+    <ParamField path="file_url" type="string" required>
+      File URL
+    </ParamField>
+    
+    <ParamField path="file_name" type="string" required>
+      File name
+    </ParamField>
+    
+    <ParamField path="uploaded_at" type="string" required>
+      Upload timestamp
+    </ParamField>
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="statusCode" type="number">
+    HTTP status code
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created asset data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addAssetService } from "@/app/actions";
+import { AddAssetPayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddAssetForm() {
+  const handleSubmit = async (data: AddAssetPayload) => {
+    const payload: AddAssetPayload = {
+      name: data.name,
+      tag: data.tag,
+      parent_site: { id: data.parent_site.id },
+      type: data.type,
+      model_number: data.model_number,
+      serial_number: data.serial_number,
+      criticality_level: data.criticality_level,
+      operating_hours: data.operating_hours,
+      commissioned_date: data.commissioned_date,
+      status: data.status,
+      maintenance_strategy: data.maintenance_strategy,
+      last_performed_maintenance: data.last_performed_maintenance,
+      major_overhaul: data.major_overhaul,
+      last_date_overhaul: data.last_date_overhaul,
+      assignee: { id: data.assignee.id },
+      power_rating: data.power_rating,
+      speed: data.speed,
+      capacity: data.capacity,
+    };
+
+    const response = await addAssetService(payload);
+    
+    if (response.success) {
+      toast.success("Asset added successfully");
+      router.push("/assets");
+    } else {
+      toast.error(response.message || "Failed to add asset");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript With Datasheet Upload
+import { addAssetService, uploadImage } from "@/app/actions";
+
+const handleSubmit = async (data: AddAssetPayload) => {
+  // Upload datasheet first
+  let datasheetData;
+  if (datasheetFile) {
+    const uploadResponse = await uploadImage(datasheetFile);
+    if (uploadResponse.success) {
+      datasheetData = {
+        file_url: uploadResponse.data.file_key,
+        file_name: datasheetFile.name,
+        uploaded_at: new Date().toISOString(),
+      };
+    }
+  }
+
+  const payload = {
+    ...data,
+    ...(datasheetData && { datasheet: datasheetData }),
+  };
+
+  const response = await addAssetService(payload);
+  
+  if (response.success) {
+    toast.success("Asset added successfully");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### editAssetService
+
+Updates an existing asset.
+
+<ParamField path="id" type="string" required>
+  Asset ID to update
+</ParamField>
+
+<ParamField path="payload" type="AddAssetPayload" required>
+  Updated asset data (same structure as addAssetService)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editAssetService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleUpdate = async (assetId: string, data: AddAssetPayload) => {
+  const response = await editAssetService(assetId, data);
+  
+  if (response.success) {
+    toast.success("Asset updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteAssetService
+
+Deletes an asset.
+
+<ParamField path="id" type="string" required>
+  Asset ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteAssetService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (assetId: string) => {
+  const response = await deleteAssetService(assetId);
+  
+  if (response.success) {
+    toast.success("Asset deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+## Site Operations
+
+### getSitesService
+
+Retrieves a paginated list of sites with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="search" type="string" optional>
+    Search term
+  </ParamField>
+  
+  <ParamField path="status" type="string" optional>
+    Filter by status
+  </ParamField>
+  
+  <ParamField path="organization_id" type="string" optional>
+    Filter by organization
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="Sites[]">
+  Array of site objects
+</ResponseField>
+
+<ResponseField name="meta" type="SitesMeta">
+  Pagination metadata (same structure as assets)
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getSitesService } from "@/app/actions";
+
+const { data: sites, meta } = await getSitesService({
+  page: 1,
+  limit: 10,
+});
+```
+
+```typescript Filter by Organization
+const { data: sites } = await getSitesService({
+  organization_id: "org-123",
+  status: "active",
+});
+```
+
+</CodeGroup>
+
+---
+
+### getSiteService
+
+Retrieves a single site by ID.
+
+<ParamField path="id" type="string" required>
+  Site ID
+</ParamField>
+
+<ResponseField name="data" type="Sites">
+  Complete site object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getSiteService } from "@/app/actions";
+
+const site = await getSiteService("site-123");
+console.log(site.name);
+console.log(site.organization.name);
+```
+
+</CodeGroup>
+
+---
+
+### addSiteService
+
+Creates a new site.
+
+<ParamField path="payload" type="AddSitesPayload" required>
+  Site creation data
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+---
+
+### editSiteService
+
+Updates an existing site.
+
+<ParamField path="id" type="string" required>
+  Site ID to update
+</ParamField>
+
+<ParamField path="payload" type="EditSitePayload" required>
+  Updated site data
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+---
+
+### deleteSiteService
+
+Deletes a site.
+
+<ParamField path="id" type="string" required>
+  Site ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+---
+
+## Analytics Operations
+
+### getAssetsAnalyticsService
+
+Retrieves asset analytics for dashboard metrics.
+
+<ResponseField name="data" type="AssetAnalytics | null">
+  Asset analytics data or null on error
+  
+  <ResponseField name="total_assets" type="number">
+    Total number of assets
+  </ResponseField>
+  
+  <ResponseField name="asset_trend" type="object">
+    Asset growth trend
+    
+    <ResponseField name="growth" type="number">
+      Number of new assets
+    </ResponseField>
+    
+    <ResponseField name="percentage" type="number">
+      Percentage change
+    </ResponseField>
+  </ResponseField>
+  
+  <ResponseField name="critical_assets" type="object">
+    Critical assets metrics
+  </ResponseField>
+  
+  <ResponseField name="assets_with_alarms" type="object">
+    Assets with active alarms
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getAssetsAnalyticsService } from "@/app/actions";
+
+export default async function Dashboard() {
+  const analytics = await getAssetsAnalyticsService();
+
+  if (!analytics) {
+    return <div>Analytics unavailable</div>;
+  }
+
+  return (
+    <div>
+      <MetricCard 
+        title="Total Assets" 
+        value={analytics.total_assets}
+        trend={analytics.asset_trend.percentage}
+      />
+      <MetricCard 
+        title="Critical Assets" 
+        value={analytics.critical_assets.total}
+      />
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+<Note>
+Returns null on permission errors (403) or network issues instead of throwing.
+</Note>
+
+---
+
+### getSitesAnalyticsService
+
+Retrieves site analytics for dashboard metrics.
+
+<ResponseField name="data" type="SitesAnalytics | null">
+  Site analytics data or null on error
+  
+  <ResponseField name="total_sites" type="number">
+    Total number of sites
+  </ResponseField>
+  
+  <ResponseField name="sites_trend_percentage" type="number">
+    Site growth percentage
+  </ResponseField>
+  
+  <ResponseField name="sites_with_issues" type="number">
+    Number of sites with issues
+  </ResponseField>
+  
+  <ResponseField name="issues_trend_percentage" type="number">
+    Issues trend percentage
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getSitesAnalyticsService } from "@/app/actions";
+
+const analytics = await getSitesAnalyticsService();
+
+if (analytics) {
+  console.log(`${analytics.total_sites} sites`);
+  console.log(`${analytics.sites_with_issues} with issues`);
+}
+```
+
+</CodeGroup>
+
+## Type Definitions
+
+Import types from `@/types` and schemas from `@/schema`:
+
+```typescript
+import { Asset, Sites, AssetAnalytics, SitesAnalytics } from "@/types";
+import { AddAssetPayload, ADD_ASSET_SCHEMA } from "@/schema";
+import { ApiResponse } from "@/app/actions";
+```
+
+## Related Actions
+
+- [Sample Actions](/api/actions/samples) - Oil sample management
+- [Organization Actions](/api/actions/organizations) - Organization and site hierarchy
+- [Type Definitions](/api/types/inventory) - Asset and site type definitions

@@ -1,0 +1,279 @@
+---
+title: Recommendations
+description: Create, track, and manage maintenance recommendations with severity-based prioritization
+---
+
+## Overview
+
+Recommendations are actionable maintenance tasks generated from oil sample analysis, alarm investigations, or routine inspections. They provide a structured way to document required actions, assign ownership, track progress, and verify completion.
+
+<Info>
+  Each recommendation links to specific assets and sampling points, creating full traceability from detection to resolution.
+</Info>
+
+## Recommendation Components
+
+Every recommendation includes:
+
+- **Title**: Brief summary of the required action
+- **Severity**: Low, Medium, High, or Critical
+- **Description**: Detailed explanation of the issue and recommended action
+- **Site**: Location where action is needed
+- **Asset**: Affected equipment
+- **Sampling Point**: Specific location on the asset (if applicable)
+- **Recommender**: Person who created or identified the need
+- **Status**: Open, In Progress, Completed, or Overdue
+- **Attachments**: Supporting documents, images, or reports
+
+## Creating a Recommendation
+
+<Steps>
+  <Step title="Navigate to Recommendations">
+    From the main menu, go to **Recommendations** and click **Add New Recommendation**.
+  </Step>
+
+  <Step title="Enter Basic Information">
+    In the main form area:
+    - **Title**: Write a clear, action-oriented summary (e.g., "Replace gearbox oil due to high copper")
+    - **Severity**: Select Low, Medium, High, or Critical based on urgency
+    - **Description**: Provide detailed context:
+      - What was observed (e.g., "Copper concentration increased from 15 ppm to 45 ppm")
+      - Why action is needed (e.g., "Indicates bearing wear")
+      - What should be done (e.g., "Inspect bearings, replace if damaged, change oil")
+  </Step>
+
+  <Step title="Link Assets Associated">
+    In the right-hand panel, select:
+    - **Site**: Location where the asset is installed (required)
+    - **Asset**: The specific equipment (filtered by site)
+    - **Sampling Point**: The exact location (filtered by asset)
+    - **Recommender**: User who identified the issue (filtered by site)
+    
+    <Note>
+      Dropdowns cascade — selecting a site filters available assets, and selecting an asset filters sampling points.
+    </Note>
+  </Step>
+
+  <Step title="Add Attachments (Optional)">
+    Upload supporting documents:
+    - Lab reports
+    - Photos of equipment condition
+    - OEM service bulletins
+    - Previous maintenance records
+  </Step>
+
+  <Step title="Create Recommendation">
+    Click **Create Recommendation** to save. The recommendation appears in the list with "Open" status.
+  </Step>
+</Steps>
+
+## Severity Levels
+
+Choose severity based on impact and urgency:
+
+<CardGroup cols={2}>
+  <Card title="Low" icon="circle" color="#10b981">
+    **Routine maintenance** — No immediate risk. Schedule during normal service intervals.
+    
+    *Example: Filter replacement at next service*
+  </Card>
+  
+  <Card title="Medium" icon="circle" color="#f59e0b">
+    **Moderate concern** — Plan action within 1-2 weeks. Monitor until completed.
+    
+    *Example: Gradual increase in wear metals*
+  </Card>
+  
+  <Card title="High" icon="circle" color="#ef4444">
+    **Significant risk** — Take action within days. Failure likely if ignored.
+    
+    *Example: Water contamination above 1000 ppm*
+  </Card>
+  
+  <Card title="Critical" icon="triangle-exclamation" color="#dc2626">
+    **Immediate action required** — Equipment at imminent risk of failure. Stop operation if unsafe.
+    
+    *Example: Sudden spike in iron indicating catastrophic wear*
+  </Card>
+</CardGroup>
+
+## Recommendation Status
+
+Recommendations progress through these states:
+
+| Status | Meaning | Actions |
+|--------|---------|----------|
+| **Open** | Newly created, not yet started | Assign resources, schedule work |
+| **In Progress** | Work is underway | Update progress notes, track completion |
+| **Completed** | Action finished, pending verification | Review results, verify effectiveness |
+| **Overdue** | Past target completion date | Escalate, reallocate resources |
+
+<Tip>
+  Regularly review overdue recommendations to identify resource constraints or recurring issues.
+</Tip>
+
+## Viewing Recommendations
+
+The recommendations list shows:
+- **Title** and severity indicator
+- **Site** and **Asset** names
+- **Status** badge
+- **Creation date**
+- Quick actions (View, Edit, Delete)
+
+Click any recommendation to see full details including description, attachments, and history.
+
+## Editing Recommendations
+
+1. Click the **Edit** icon or open the recommendation and select **Edit**
+2. Modify any fields:
+   - Update status as work progresses
+   - Refine description based on findings
+   - Change severity if situation changes
+   - Add new attachments
+3. Click **Update Recommendation** to save
+
+<Note>
+  When changing status to "Completed", document what action was taken in the description.
+</Note>
+
+## Filtering and Searching
+
+Use the filter panel to find recommendations:
+
+- **Search**: Text search in titles and descriptions
+- **Severity**: Low, Medium, High, or Critical
+- **Status**: Open, In Progress, Completed, or Overdue
+- **Site**: Filter by location
+- **Asset**: Filter by equipment
+- **Date Range**: Created within specific period
+
+## Recommendation Analytics
+
+The dashboard provides insights into recommendation trends:
+
+### Summary Cards
+- **Total Recommendations**: Overall count with trend percentage
+- **Open & Overdue**: Recommendations past due date
+- **Overdue Count**: Number of delayed actions
+
+### Trend Analysis
+
+View monthly trends to identify:
+- **Increasing Recommendations**: May indicate deteriorating equipment condition
+- **High Overdue Rates**: Suggests resource or prioritization issues
+- **Seasonal Patterns**: Equipment with recurring issues at specific times
+
+<Warning>
+  A growing backlog of overdue recommendations indicates either inadequate resources or incorrect severity assessment.
+</Warning>
+
+## Linking Recommendations to Alarms
+
+Recommendations often originate from alarms:
+
+1. When viewing an [Alarm](/features/alarm-monitoring), note the alarm ID
+2. Create a recommendation with action steps
+3. Reference the alarm ID in the description
+4. The alarm will show the linked recommendation
+
+This creates bidirectional traceability between detection and action.
+
+## Best Practices
+
+### Writing Effective Recommendations
+
+<Tip>
+  Use action verbs: "Replace", "Inspect", "Adjust", "Clean", "Repair" — not "Check" or "Look at".
+</Tip>
+
+**Good Example:**
+```
+Title: Replace hydraulic filter and oil
+Severity: Medium
+Description: Particle count increased to ISO 21/19/16 (from 18/16/13 
+last month). Indicates filter saturation. Replace filter, drain 25% of 
+oil, top up with ISO VG 46 hydraulic oil, resample in 1 week to verify 
+cleanliness.
+```
+
+**Poor Example:**
+```
+Title: Check hydraulic system
+Severity: Low
+Description: Something might be wrong. Take a look.
+```
+
+### Prioritization Guidelines
+
+1. **Critical**: Address within 24 hours, even if off-shift
+2. **High**: Schedule within 3-5 days, plan parts and resources
+3. **Medium**: Complete within 2 weeks during regular maintenance
+4. **Low**: Bundle with next scheduled service
+
+### Documentation
+
+- **Before**: Attach photos or reports showing the issue
+- **During**: Document parts replaced, procedures followed
+- **After**: Upload verification samples, photos of repaired components
+
+### Follow-Up
+
+After completing a recommendation:
+
+<Steps>
+  <Step title="Mark as Completed">
+    Change status to "Completed" in the recommendation.
+  </Step>
+  
+  <Step title="Document Actions Taken">
+    Update the description with:
+    - What was done
+    - Parts replaced
+    - Any deviations from plan
+  </Step>
+  
+  <Step title="Schedule Verification">
+    If the recommendation involved oil change or component replacement, schedule a follow-up sample to confirm improvement.
+  </Step>
+  
+  <Step title="Close Linked Alarms">
+    If the recommendation addressed an alarm, verify the condition is resolved and close the alarm.
+  </Step>
+</Steps>
+
+## Bulk Actions
+
+For multiple recommendations:
+
+- **Export**: Download list as CSV for external analysis
+- **Print**: Generate printable work orders
+- **Bulk Status Update**: Change status for multiple items (if supported)
+
+## Attachments
+
+Supported attachment types:
+- **PDF**: Lab reports, service bulletins
+- **Images**: JPG, PNG photos of equipment
+- **Documents**: Word, Excel files
+
+Maximum file size: Check with your administrator (typically 10-50 MB).
+
+## Deleting Recommendations
+
+<Warning>
+  Deleting removes the recommendation permanently. Historical data will be lost.
+</Warning>
+
+To delete:
+1. Click the **Delete** icon
+2. Confirm in the dialog
+
+Only delete recommendations created in error. For obsolete or duplicate recommendations, mark as "Completed" with a note instead.
+
+## Related Features
+
+- **[Oil Sample Analysis](/features/oil-sample-analysis)**: Primary source of recommendation data
+- **[Alarm Monitoring](/features/alarm-monitoring)**: Link alarms to corrective actions
+- **[Asset Management](/features/asset-management)**: View all recommendations for an asset
+- **[Root Cause Analysis](/features/root-cause-analysis)**: Investigate recurring recommendation patterns

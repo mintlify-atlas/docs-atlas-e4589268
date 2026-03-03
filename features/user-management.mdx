@@ -1,0 +1,389 @@
+---
+title: User Management
+description: Manage user accounts, roles, and permissions with organization and site-based access control
+---
+
+## Overview
+
+User Management provides centralized control over who can access MicroCBM and what they can do. Users are assigned to organizations and sites, with role-based permissions determining their capabilities.
+
+<Info>
+  User access follows the organizational hierarchy: users can only access data within their assigned organization and site(s).
+</Info>
+
+## User Attributes
+
+Each user account includes:
+
+**Personal Information:**
+- **First Name** and **Last Name**
+- **Email**: Used for login and notifications
+- **Phone**: Contact number in international format
+- **Country**: User's country
+- **Date of Birth**: Optional demographic info
+
+**Organizational Assignment:**
+- **Organization**: Which company the user belongs to
+- **Site**: Primary work location
+- **Role**: Defines permissions (SuperAdmin, Admin, Operator, etc.)
+
+**Account Status:**
+- **Active**: User can log in and use the system
+- **Inactive**: User is disabled but account retained
+- **Pending**: User invited but hasn't completed registration
+
+## Creating a New User
+
+<Steps>
+  <Step title="Navigate to User Management">
+    From the main menu, go to **User Management** and click **Add New User**.
+  </Step>
+
+  <Step title="Enter Personal Details">
+    Fill in user information:
+    - **First Name**: User's given name
+    - **Last Name**: User's family name
+    - **Email**: Must be unique, used for login
+    - **Phone**: Include country code (e.g., +1 555-123-4567)
+    - **Country**: Select from dropdown
+    - **Date of Birth**: Optional
+  </Step>
+
+  <Step title="Assign Organization and Site">
+    Link the user to their work location:
+    - **Organization**: Select the company (SuperAdmin only)
+    - **Site**: Choose the facility where they work
+    
+    <Note>
+      The site dropdown filters based on the selected organization.
+    </Note>
+  </Step>
+
+  <Step title="Select Role">
+    Choose the appropriate permission level:
+    - **SuperAdmin**: Full system access (typically service provider admins)
+    - **Admin**: Organization-wide access
+    - **Maintenance Manager**: Site maintenance oversight
+    - **Operator**: Day-to-day operations, limited editing
+    - **Viewer**: Read-only access
+    
+    See [Roles and Permissions](#roles-and-permissions) for detailed capability breakdown.
+  </Step>
+
+  <Step title="Set Initial Status">
+    - **Active**: User can log in immediately
+    - **Pending**: User receives invitation email to complete registration
+    - **Inactive**: Account created but disabled
+  </Step>
+
+  <Step title="Create User">
+    Click **Create User** to save. If status is "Pending", an invitation email is sent.
+  </Step>
+</Steps>
+
+<Tip>
+  Use "Pending" status for new hires who haven't started yet, then activate their account on their start date.
+</Tip>
+
+## Roles and Permissions
+
+MicroCBM uses role-based access control (RBAC) with granular permissions.
+
+### Permission Structure
+
+Permissions follow the pattern: `resource:action`
+
+Examples:
+- `assets:create` — Can create new assets
+- `alarms:acknowledge` — Can acknowledge alarms
+- `recommendations:delete` — Can delete recommendations
+- `users:read` — Can view user list
+
+### Built-In Roles
+
+<Tabs>
+  <Tab title="SuperAdmin">
+    **Full system access** across all organizations and sites.
+    
+    **Capabilities:**
+    - Create/edit/delete organizations
+    - Manage all sites across all organizations
+    - Create/edit/delete users in any organization
+    - View all assets, alarms, recommendations, and samples
+    - Manage roles and permissions
+    - Access system settings
+    
+    **Use Case:** Service provider administrators, platform owners
+  </Tab>
+  
+  <Tab title="Admin">
+    **Organization-wide access** within their assigned organization.
+    
+    **Capabilities:**
+    - View all sites in their organization
+    - Create/edit/delete sites within their organization
+    - Manage users in their organization
+    - Full access to assets, alarms, recommendations, samples in their organization
+    - Cannot access other organizations
+    
+    **Use Case:** Client organization administrators, facility managers
+  </Tab>
+  
+  <Tab title="Maintenance Manager">
+    **Site-level management** with editing permissions.
+    
+    **Capabilities:**
+    - View/edit assets at their site
+    - Create/edit/delete alarms and recommendations
+    - View/edit samples and sampling points
+    - Acknowledge alarms
+    - Assign work to operators
+    - Cannot manage users or site settings
+    
+    **Use Case:** Site maintenance supervisors, reliability engineers
+  </Tab>
+  
+  <Tab title="Operator">
+    **Day-to-day operations** with limited editing.
+    
+    **Capabilities:**
+    - View assets, alarms, recommendations, samples
+    - Acknowledge alarms
+    - Update work status (e.g., mark recommendations in progress)
+    - Add samples and update sampling data
+    - Cannot delete or create assets
+    
+    **Use Case:** Field technicians, plant operators
+  </Tab>
+  
+  <Tab title="Viewer">
+    **Read-only access** for reporting and monitoring.
+    
+    **Capabilities:**
+    - View all data at their site
+    - Export reports
+    - View dashboards and analytics
+    - Cannot edit, create, or delete anything
+    
+    **Use Case:** Management, auditors, contractors
+  </Tab>
+</Tabs>
+
+### Custom Roles
+
+Administrators can create custom roles with specific permission combinations:
+
+1. Navigate to **Roles** (under User Management)
+2. Click **Add New Role**
+3. Name the role (e.g., "Quality Inspector")
+4. Select permissions by resource and action
+5. Save the role
+
+Custom roles are then available when creating or editing users.
+
+## Editing Users
+
+<Steps>
+  <Step title="Find the User">
+    Use the search or filters to locate the user in the user list.
+  </Step>
+
+  <Step title="Open Edit Form">
+    Click the **Edit** icon next to the user's name.
+  </Step>
+
+  <Step title="Update Fields">
+    Modify any user attributes:
+    - Personal information
+    - Organization or site assignment
+    - Role
+    - Status (Active/Inactive/Pending)
+  </Step>
+
+  <Step title="Save Changes">
+    Click **Update User** to apply changes.
+  </Step>
+</Steps>
+
+<Note>
+  When changing a user's organization, their site is automatically cleared since sites belong to specific organizations.
+</Note>
+
+## Managing User Status
+
+### Activating Users
+
+Change status from "Pending" or "Inactive" to "Active":
+1. Edit the user
+2. Set **Status** to **Active**
+3. Save
+
+The user can now log in immediately.
+
+### Deactivating Users
+
+<Warning>
+  Deactivated users cannot log in, but their account data is retained for audit trails.
+</Warning>
+
+To deactivate:
+1. Edit the user
+2. Set **Status** to **Inactive**
+3. Save
+
+**Use Cases for Deactivation:**
+- Employee on extended leave
+- Contractor whose project ended
+- Former employee (retain records, prevent access)
+
+### Pending Users
+
+Users with "Pending" status have been created but haven't completed registration:
+
+- They receive an invitation email with a registration link
+- They set their own password during registration
+- Status automatically changes to "Active" upon completion
+
+<Tip>
+  Resend invitation emails by editing the user and clicking **Resend Invitation** (if available).
+</Tip>
+
+## Viewing User Details
+
+Click on any user to see their profile:
+
+- **Personal Information**: Name, email, phone, country
+- **Organization & Site**: Current assignments
+- **Role**: Permission level
+- **Status**: Active, Inactive, or Pending
+- **Account History**: Created date, last updated
+- **Activity**: Recent logins, actions performed (if auditing enabled)
+
+## Filtering and Searching Users
+
+Use the filter panel to find users:
+
+- **Search**: Name, email, or phone number
+- **Organization**: Filter by company (SuperAdmin only)
+- **Site**: Filter by location
+- **Role**: Filter by permission level
+- **Status**: Active, Inactive, or Pending
+
+## Bulk User Operations
+
+### Import Users (CSV)
+
+Import multiple users at once:
+
+1. Download the CSV template
+2. Fill in user information (one user per row)
+3. Upload the CSV file
+4. Review import preview
+5. Confirm import
+
+Users are created with "Pending" status and receive invitation emails.
+
+### Export Users
+
+Export user list to CSV for:
+- Backup
+- Analysis in Excel
+- Integration with other systems
+
+1. Apply filters (if needed)
+2. Click **Export**
+3. Choose CSV or Excel format
+4. Download file
+
+## Password Management
+
+### User Password Reset
+
+Users who forget their password:
+
+1. Click **Forgot Password** on the login page
+2. Enter their email address
+3. Receive password reset link via email
+4. Set new password
+
+### Admin Password Reset
+
+Administrators can reset passwords for users:
+
+1. Edit the user
+2. Click **Reset Password**
+3. Temporary password is emailed to the user
+4. User must change password on next login
+
+<Warning>
+  Admins cannot see user passwords. All passwords are hashed and cannot be retrieved.
+</Warning>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Principle of Least Privilege" icon="shield">
+    Assign the minimum role needed for each user's job. Don't give everyone Admin access.
+  </Card>
+  
+  <Card title="Regular Access Reviews" icon="clipboard-check">
+    Quarterly, review user list and deactivate accounts no longer needed.
+  </Card>
+  
+  <Card title="Strong Password Policy" icon="key">
+    Require minimum 8 characters, mix of upper/lower/numbers/symbols.
+  </Card>
+  
+  <Card title="Multi-Factor Authentication" icon="mobile">
+    Enable MFA for Admin and SuperAdmin accounts (if supported).
+  </Card>
+</CardGroup>
+
+### Password Requirements
+
+MicroCBM enforces:
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character
+- Cannot reuse last 3 passwords
+- Must change every 90 days (configurable)
+
+## Deleting Users
+
+<Warning>
+  Deleting a user permanently removes their account and login credentials. Historical data (samples, recommendations they created) may be retained with their name, but the account cannot be restored.
+</Warning>
+
+To delete:
+1. Click **Delete** next to the user
+2. Confirm in the dialog
+3. User is immediately logged out if active
+
+**When to Delete:**
+- Duplicate accounts created by mistake
+- Test accounts in production (avoid this!)
+
+**When NOT to Delete:**
+- Former employees: **Deactivate** instead to preserve audit trail
+- Contractors between projects: **Deactivate** and reactivate when they return
+
+## User Activity Auditing
+
+Track what users do in the system:
+
+- **Login History**: When users logged in/out
+- **Action Logs**: Changes made to assets, alarms, recommendations
+- **Export History**: What reports were downloaded
+
+<Note>
+  Audit logs are typically retained for compliance and troubleshooting. Retention period varies by deployment.
+</Note>
+
+## Related Features
+
+- **[Organizations & Sites](/features/organizations-sites)**: Users are assigned to organizational entities
+- **[Asset Management](/features/asset-management)**: Assets have assignees (users)
+- **[Recommendations](/features/recommendations)**: Recommendations have recommenders (users)
+- **[Root Cause Analysis](/features/root-cause-analysis)**: RCA leaders and team members are users

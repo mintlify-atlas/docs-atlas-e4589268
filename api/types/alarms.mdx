@@ -1,0 +1,317 @@
+---
+title: 'Alarm Types'
+description: 'Type definitions for alarm monitoring and analytics'
+icon: 'bell'
+---
+
+## Alarm
+
+Represents an alarm triggered by abnormal asset conditions or sample results.
+
+```typescript
+export interface Alarm {
+  id: string;
+  parameter: string;
+  site: {
+    id: string;
+    name?: string;
+  };
+  first_detected: string;
+  acknowledged_status: boolean;
+  linked_recommendations: {
+    id: string;
+    title?: string;
+  }[];
+  created_at_datetime: string;
+  updated_at_datetime: string;
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the alarm
+</ResponseField>
+
+<ResponseField name="parameter" type="string" required>
+  The parameter that triggered the alarm (e.g., "Iron Content", "Viscosity", "Water Contamination")
+</ResponseField>
+
+<ResponseField name="site" type="object" required>
+  Reference to the site where the alarm was triggered
+  
+  <Expandable title="Site reference">
+    <ResponseField name="id" type="string" required>
+      Site ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Site name (optional, populated when hydrated)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="first_detected" type="string" required>
+  ISO 8601 timestamp when the alarm was first detected
+</ResponseField>
+
+<ResponseField name="acknowledged_status" type="boolean" required>
+  Indicates whether the alarm has been acknowledged by a user
+  
+  - `true`: Alarm has been acknowledged
+  - `false`: Alarm is unacknowledged and requires attention
+</ResponseField>
+
+<ResponseField name="linked_recommendations" type="array" required>
+  Array of recommendations linked to this alarm
+  
+  <Expandable title="Recommendation reference">
+    <ResponseField name="id" type="string" required>
+      Recommendation ID
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      Recommendation title (optional)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="created_at_datetime" type="string" required>
+  ISO 8601 timestamp when alarm record was created
+</ResponseField>
+
+<ResponseField name="updated_at_datetime" type="string" required>
+  ISO 8601 timestamp when alarm record was last updated
+</ResponseField>
+
+### Alarm Workflow
+
+<Steps>
+  <Step title="Detection">
+    Alarm is automatically triggered when a monitored parameter exceeds thresholds
+  </Step>
+  
+  <Step title="Notification">
+    Relevant personnel are notified of the alarm
+  </Step>
+  
+  <Step title="Acknowledgment">
+    User acknowledges the alarm, setting `acknowledged_status` to `true`
+  </Step>
+  
+  <Step title="Action">
+    User creates or links recommendations to address the root cause
+  </Step>
+</Steps>
+
+---
+
+## AlarmFilters
+
+Filter options for querying alarms.
+
+```typescript
+export interface AlarmFilters {
+  search?: string;
+  parameter?: string;
+  acknowledged_status?: string;
+  site?: string;
+}
+```
+
+### Fields
+
+<ResponseField name="search" type="string">
+  Search term for general text search across alarm fields
+</ResponseField>
+
+<ResponseField name="parameter" type="string">
+  Filter by specific parameter type
+</ResponseField>
+
+<ResponseField name="acknowledged_status" type="string">
+  Filter by acknowledgment status
+  
+  - `"true"`: Show only acknowledged alarms
+  - `"false"`: Show only unacknowledged alarms
+  - Omit to show all alarms
+</ResponseField>
+
+<ResponseField name="site" type="string">
+  Filter by site ID
+</ResponseField>
+
+---
+
+## AlarmAnalytics
+
+Comprehensive analytics for alarm monitoring and forecasting.
+
+```typescript
+export interface AlarmAnalytics {
+  total_alarms: number;
+  alarm_trend: {
+    growth: number;
+    percentage: number;
+  };
+  open_overdue_alarms: number;
+  open_overdue_trend: {
+    growth: number;
+    percentage: number;
+  };
+  forecast_alarms: number;
+  forecast_trend: {
+    growth: number;
+    percentage: number;
+  };
+}
+```
+
+### Fields
+
+<ResponseField name="total_alarms" type="number" required>
+  Total number of alarms in the system
+</ResponseField>
+
+<ResponseField name="alarm_trend" type="object" required>
+  Trend data for total alarms compared to previous period
+  
+  <Expandable title="Trend object">
+    <ResponseField name="growth" type="number">
+      Absolute change in alarm count (positive = increase, negative = decrease)
+    </ResponseField>
+    <ResponseField name="percentage" type="number">
+      Percentage change in alarm count
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="open_overdue_alarms" type="number" required>
+  Number of alarms that are open and overdue for action
+</ResponseField>
+
+<ResponseField name="open_overdue_trend" type="object" required>
+  Trend data for open/overdue alarms
+  
+  <Expandable title="Trend object">
+    <ResponseField name="growth" type="number">
+      Absolute change in overdue alarm count
+    </ResponseField>
+    <ResponseField name="percentage" type="number">
+      Percentage change in overdue alarm count
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="forecast_alarms" type="number" required>
+  Predicted number of alarms for the next period based on historical trends
+</ResponseField>
+
+<ResponseField name="forecast_trend" type="object" required>
+  Trend data for forecasted alarms
+  
+  <Expandable title="Trend object">
+    <ResponseField name="growth" type="number">
+      Predicted change in alarm count
+    </ResponseField>
+    <ResponseField name="percentage" type="number">
+      Predicted percentage change
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Usage Example
+
+```typescript
+import type { Alarm, AlarmFilters, AlarmAnalytics } from '@/types';
+
+// Query unacknowledged alarms for a specific site
+const filters: AlarmFilters = {
+  site: 'site_123',
+  acknowledged_status: 'false'
+};
+
+const alarms: Alarm[] = await getAlarms(filters);
+
+// Process alarms
+alarms.forEach((alarm: Alarm) => {
+  console.log(`Alarm: ${alarm.parameter}`);
+  console.log(`Site: ${alarm.site.name}`);
+  console.log(`First Detected: ${alarm.first_detected}`);
+  console.log(`Acknowledged: ${alarm.acknowledged_status}`);
+  console.log(`Linked Recommendations: ${alarm.linked_recommendations.length}`);
+});
+
+// Display analytics
+const analytics: AlarmAnalytics = await getAlarmAnalytics();
+
+console.log(`Total Alarms: ${analytics.total_alarms}`);
+console.log(`Alarm Trend: ${analytics.alarm_trend.percentage}%`);
+console.log(`Open/Overdue: ${analytics.open_overdue_alarms}`);
+console.log(`Forecast: ${analytics.forecast_alarms} alarms predicted`);
+```
+
+## Common Alarm Parameters
+
+<AccordionGroup>
+  <Accordion title="Wear Metal Alarms">
+    Triggered when wear metal concentrations exceed normal thresholds:
+    - High Iron (Fe)
+    - Elevated Copper (Cu)
+    - Abnormal Chromium (Cr)
+    - Excessive Aluminum (Al)
+  </Accordion>
+  
+  <Accordion title="Contaminant Alarms">
+    Triggered by contamination detection:
+    - Water contamination
+    - Fuel dilution
+    - Glycol presence (coolant leak)
+    - High soot levels
+  </Accordion>
+  
+  <Accordion title="Physical Property Alarms">
+    Triggered by changes in oil properties:
+    - Viscosity increase/decrease
+    - High particle counts
+    - Abnormal TAN (Total Acid Number)
+    - Low TBN (Total Base Number)
+  </Accordion>
+  
+  <Accordion title="Operational Alarms">
+    Triggered by operational conditions:
+    - Overdue sampling
+    - Missed maintenance
+    - Critical asset status change
+  </Accordion>
+</AccordionGroup>
+
+## Acknowledgment Flow
+
+```typescript
+import { acknowledgeAlarm } from '@/actions/alarms';
+
+// Acknowledge an alarm
+const result = await acknowledgeAlarm(alarmId);
+
+if (result.success) {
+  console.log('Alarm acknowledged successfully');
+  
+  // Optionally link a recommendation
+  await linkAlarmToRecommendation(alarmId, recommendationId);
+}
+```
+
+<Note>
+  Acknowledging an alarm does not close it—it indicates that the alarm has been reviewed and action is being taken. Link recommendations to track corrective actions.
+</Note>
+
+## Related Types
+
+<CardGroup cols={2}>
+  <Card title="Sample Types" icon="flask" href="/api/types/samples">
+    Sample analysis results trigger alarms
+  </Card>
+  
+  <Card title="Recommendation Types" icon="lightbulb" href="/api/types/recommendations">
+    Alarms are linked to recommendations for corrective action
+  </Card>
+</CardGroup>

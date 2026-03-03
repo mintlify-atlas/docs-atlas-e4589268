@@ -1,0 +1,153 @@
+---
+title: Asset Management
+description: Track and manage your equipment inventory with detailed asset profiles and maintenance history
+---
+
+## Overview
+
+The Asset Management feature helps you maintain a comprehensive inventory of your equipment and machinery. Each asset includes detailed specifications, operational data, maintenance records, and ownership information to support condition-based maintenance strategies.
+
+<Info>
+  Assets are organized by site and can be assigned to specific users for ownership and accountability.
+</Info>
+
+## Key Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Comprehensive Profiles" icon="database">
+    Track manufacturer details, model numbers, serial numbers, technical specifications, and commissioning dates
+  </Card>
+  <Card title="Criticality Levels" icon="triangle-exclamation">
+    Classify assets as low, medium, or high criticality to prioritize maintenance activities
+  </Card>
+  <Card title="Maintenance History" icon="clock-rotate-left">
+    Record last performed maintenance, major overhauls, and operating hours since oil changes
+  </Card>
+  <Card title="Datasheet Uploads" icon="file-pdf">
+    Attach equipment datasheets and technical documentation for easy reference
+  </Card>
+</CardGroup>
+
+## Adding a New Asset
+
+<Steps>
+  <Step title="Navigate to Assets">
+    From the main navigation, go to **Assets** and click **Add New Asset**.
+  </Step>
+
+  <Step title="Enter Basic Information">
+    Fill in the required fields:
+    - **Asset Name**: Descriptive name for the equipment
+    - **Asset Code/Tag**: Unique identifier or tag number
+    - **Organization**: Select the parent organization
+    - **Site**: Choose the site where the asset is located
+    - **Asset Type**: Select or create a custom asset type (e.g., Pump, Motor, Compressor)
+    - **Manufacturer**: Enter the OEM name
+    - **Model Number** and **Serial Number**
+    - **Upgraded/Modified**: Indicate if the asset has been modified from original specs
+  </Step>
+
+  <Step title="Configure Operational Data">
+    Set operational parameters:
+    - **Critical Level**: Low, Medium, or High
+    - **Operating Hours**: Hours since last oil change
+    - **Commissioned Date**: When the asset was put into service
+  </Step>
+
+  <Step title="Add Maintenance Information">
+    Document maintenance strategy:
+    - **Asset Status**: Active, Inactive, or Pending
+    - **Maintenance Strategy**: Describe your maintenance approach
+    - **Last Performed Maintenance**: Date of most recent service
+    - **Major Overhaul Date**: When major work was completed
+    - **Last Date Overhaul**: Most recent overhaul date
+  </Step>
+
+  <Step title="Assign Ownership">
+    Select an **Assignee** from users in the same organization to take ownership of the asset.
+  </Step>
+
+  <Step title="Enter Technical Specifications">
+    Add performance specifications:
+    - **Power Rating**: Value in kW (unit appended automatically)
+    - **Speed**: Value in RPM (unit appended automatically)
+    - **Capacity**: Value in m³/h (unit appended automatically)
+  </Step>
+
+  <Step title="Upload Datasheet (Optional)">
+    Attach a PDF or image file with the equipment datasheet or technical documentation.
+  </Step>
+
+  <Step title="Create Asset">
+    Click **Create Asset** to save. You'll be redirected to the assets list.
+  </Step>
+</Steps>
+
+## Managing Assets
+
+### Viewing Asset Details
+
+Click on any asset in the table to view its complete profile, including:
+- All basic and technical information
+- Associated site and organization
+- Assigned owner
+- Maintenance history
+- Attached datasheets
+- Related sampling points and samples
+
+### Editing Assets
+
+1. Click the **Edit** icon next to an asset
+2. Update any fields as needed
+3. Click **Update Asset** to save changes
+
+<Note>
+  Organization and site selections cascade — changing the organization filters available sites, and changing the site filters available assignees.
+</Note>
+
+### Filtering Assets
+
+Use the filter panel to find assets by:
+- **Search**: Name or tag
+- **Site**: Filter by location
+- **Asset Type**: Filter by equipment category
+- **Criticality Level**: Low, Medium, or High
+- **Status**: Active, Inactive, or Pending
+
+### Deleting Assets
+
+<Warning>
+  Deleting an asset is permanent. Ensure the asset is no longer in use and has no active alarms or recommendations.
+</Warning>
+
+To delete an asset:
+1. Click the **Delete** icon next to the asset
+2. Confirm the deletion in the dialog
+
+## Asset Analytics
+
+The asset dashboard displays key metrics:
+- **Total Assets**: Count of all assets in the system
+- **Asset Trend**: Growth percentage compared to previous period
+- **Critical Assets**: Number of high-criticality assets and trend
+- **Assets with Alarms**: Count of assets with active alarms and trend
+
+## Best Practices
+
+<Tip>
+  Maintain accurate operating hours to ensure timely oil sampling and analysis.
+</Tip>
+
+1. **Use Consistent Naming**: Establish a naming convention for assets (e.g., include location and type)
+2. **Set Criticality Accurately**: Prioritize critical assets for more frequent monitoring
+3. **Keep Records Current**: Update operating hours and maintenance dates regularly
+4. **Assign Ownership**: Ensure every asset has an assigned owner for accountability
+5. **Upload Datasheets**: Store technical documentation for quick reference during troubleshooting
+6. **Tag Assets Properly**: Use unique, scannable tags that match physical labels on equipment
+
+## Related Features
+
+- **[Sampling Points](/features/oil-sample-analysis#sampling-points)**: Create sampling locations on assets
+- **[Alarms](/features/alarm-monitoring)**: Monitor asset health with automated alerts
+- **[Recommendations](/features/recommendations)**: Link maintenance actions to specific assets
+- **[Root Cause Analysis](/features/root-cause-analysis)**: Investigate asset failures

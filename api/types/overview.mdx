@@ -1,0 +1,138 @@
+---
+title: 'Type Definitions Overview'
+description: 'Complete TypeScript type definitions for the MicroCBM platform'
+icon: 'brackets-curly'
+---
+
+## Introduction
+
+MicroCBM uses TypeScript to provide type safety across the entire application. This section documents all type definitions organized by domain, extracted directly from the source code.
+
+## Type Categories
+
+<CardGroup cols={2}>
+  <Card title="Inventory Types" icon="warehouse" href="/api/types/inventory">
+    Asset, Sites, and related analytics types for equipment management
+  </Card>
+  
+  <Card title="Sample Types" icon="flask" href="/api/types/samples">
+    Oil sample analysis types including wear metals, contaminants, and measurements
+  </Card>
+  
+  <Card title="Alarm Types" icon="bell" href="/api/types/alarms">
+    Alarm monitoring and acknowledgment types with analytics
+  </Card>
+  
+  <Card title="Recommendation Types" icon="lightbulb" href="/api/types/recommendations">
+    Maintenance recommendation types with severity levels and attachments
+  </Card>
+  
+  <Card title="RCA Types" icon="diagram-project" href="/api/types/rca">
+    Root Cause Analysis types including 5 Whys, Logic Tree, and Fishbone diagrams
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+### Timestamps
+
+All entities include timestamp fields for tracking creation and updates:
+
+```typescript
+created_at: number;           // Unix timestamp in milliseconds
+created_at_datetime: string;  // ISO 8601 formatted string
+updated_at: number;           // Unix timestamp in milliseconds
+updated_at_datetime: string;  // ISO 8601 formatted string
+```
+
+### Entity References
+
+Related entities are embedded as nested objects with at minimum an `id` field:
+
+```typescript
+site: {
+  id: string;
+  name?: string;
+}
+```
+
+This pattern allows for optional hydration of related data while maintaining referential integrity.
+
+### Filter Types
+
+Most collections have corresponding filter types for querying:
+
+```typescript
+export interface SampleFilters {
+  search?: string;
+  site_id?: string;
+  asset_id?: string;
+  sampling_point_id?: string;
+  lab_name?: string;
+}
+```
+
+All filter fields are optional, enabling flexible query composition.
+
+### Analytics Types
+
+Analytics types follow a consistent pattern with totals and trend data:
+
+```typescript
+export interface AlarmAnalytics {
+  total_alarms: number;
+  alarm_trend: {
+    growth: number;
+    percentage: number;
+  };
+  forecast_alarms: number;
+  open_overdue_alarms: number;
+}
+```
+
+## Type Safety Best Practices
+
+<Note>
+  All types are exported from `@/types` and can be imported directly:
+  
+  ```typescript
+  import type { Asset, Sample, Alarm } from '@/types';
+  ```
+</Note>
+
+### Using Discriminated Unions
+
+Severity and status fields use literal types for type safety:
+
+```typescript
+severity: "low" | "medium" | "high" | "critical";
+status: "open" | "in_progress" | "completed" | "overdue";
+```
+
+This ensures compile-time validation and excellent IDE autocomplete.
+
+### Payload Types
+
+Create and update operations have dedicated payload types that may differ from the full entity:
+
+```typescript
+export interface AddRecommendationPayload {
+  title: string;
+  severity: "low" | "medium" | "high" | "critical";
+  description: string;
+  attachments?: RecommendationAttachment[];
+  // ... references to related entities
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Server Actions" icon="server" href="/api/actions/overview">
+    Learn how to use these types with server actions
+  </Card>
+  
+  <Card title="Hooks" icon="hook" href="/api/hooks/overview">
+    Explore custom hooks that work with these types
+  </Card>
+</CardGroup>

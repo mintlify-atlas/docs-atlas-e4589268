@@ -1,0 +1,397 @@
+---
+title: 'Sample Types'
+description: 'Type definitions for oil sample analysis and measurements'
+icon: 'flask'
+---
+
+## Sample
+
+Represents an oil sample with complete analysis results including wear metals, contaminants, particle counts, and viscosity measurements.
+
+```typescript
+export interface Sample {
+  id: string;
+  site: {
+    id: string;
+    name?: string;
+  };
+  asset: {
+    id: string;
+    name?: string;
+  };
+  sampling_point: {
+    id: string;
+    name?: string;
+  };
+  serial_number: string;
+  date_sampled: number;
+  lab_name: string;
+  service_meter_reading: string;
+  hrs: string;
+  oil_in_service: string;
+  filter_changed: string;
+  oil_drained: string;
+  severity: string;
+  wear_metals: WearMetal[];
+  contaminants: Contaminant[];
+  particle_counts: ParticleCount[];
+  viscosity_levels: ViscosityLevel[];
+  created_at_datetime: string;
+  updated_at_datetime: string;
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the sample
+</ResponseField>
+
+<ResponseField name="site" type="object" required>
+  Reference to the site where sample was taken
+  
+  <Expandable title="Site reference">
+    <ResponseField name="id" type="string" required>
+      Site ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Site name (optional, populated when hydrated)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="asset" type="object" required>
+  Reference to the asset being sampled
+  
+  <Expandable title="Asset reference">
+    <ResponseField name="id" type="string" required>
+      Asset ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Asset name (optional)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="sampling_point" type="object" required>
+  Reference to the specific sampling point on the asset
+  
+  <Expandable title="Sampling point reference">
+    <ResponseField name="id" type="string" required>
+      Sampling point ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Sampling point name (optional)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="serial_number" type="string" required>
+  Sample serial number for tracking
+</ResponseField>
+
+<ResponseField name="date_sampled" type="number" required>
+  Unix timestamp when sample was collected
+</ResponseField>
+
+<ResponseField name="lab_name" type="string" required>
+  Name of the laboratory that analyzed the sample
+</ResponseField>
+
+<ResponseField name="service_meter_reading" type="string" required>
+  Equipment service meter reading at time of sampling
+</ResponseField>
+
+<ResponseField name="hrs" type="string" required>
+  Operating hours on the oil
+</ResponseField>
+
+<ResponseField name="oil_in_service" type="string" required>
+  Duration oil has been in service
+</ResponseField>
+
+<ResponseField name="filter_changed" type="string" required>
+  Date or status of last filter change
+</ResponseField>
+
+<ResponseField name="oil_drained" type="string" required>
+  Date or status of last oil drain
+</ResponseField>
+
+<ResponseField name="severity" type="string" required>
+  Overall severity assessment of the sample results
+</ResponseField>
+
+<ResponseField name="wear_metals" type="WearMetal[]" required>
+  Array of wear metal measurements (see WearMetal type below)
+</ResponseField>
+
+<ResponseField name="contaminants" type="Contaminant[]" required>
+  Array of contaminant measurements (see Contaminant type below)
+</ResponseField>
+
+<ResponseField name="particle_counts" type="ParticleCount[]" required>
+  Array of particle count measurements (see ParticleCount type below)
+</ResponseField>
+
+<ResponseField name="viscosity_levels" type="ViscosityLevel[]" required>
+  Array of viscosity measurements at different temperatures (see ViscosityLevel type below)
+</ResponseField>
+
+<ResponseField name="created_at_datetime" type="string" required>
+  ISO 8601 timestamp when sample record was created
+</ResponseField>
+
+<ResponseField name="updated_at_datetime" type="string" required>
+  ISO 8601 timestamp when sample record was last updated
+</ResponseField>
+
+---
+
+## WearMetal
+
+Represents a single wear metal measurement in the oil sample.
+
+```typescript
+export interface WearMetal {
+  element: string;
+  value: number;
+  unit: string;
+}
+```
+
+### Fields
+
+<ResponseField name="element" type="string" required>
+  Chemical element symbol (e.g., "Fe", "Cu", "Cr", "Al", "Pb")
+</ResponseField>
+
+<ResponseField name="value" type="number" required>
+  Measured concentration value
+</ResponseField>
+
+<ResponseField name="unit" type="string" required>
+  Unit of measurement (typically "ppm" - parts per million)
+</ResponseField>
+
+### Common Wear Metals
+
+<Note>
+  Common wear metals and their sources:
+  - **Iron (Fe)**: Gears, bearings, cylinders
+  - **Copper (Cu)**: Bearings, bushings, coolers
+  - **Chromium (Cr)**: Rings, liners, shafts
+  - **Aluminum (Al)**: Pistons, thrust washers
+  - **Lead (Pb)**: Bearings, bushings
+  - **Tin (Sn)**: Bearings, bushings
+  - **Silicon (Si)**: Dirt, seals, coolant contamination
+</Note>
+
+---
+
+## Contaminant
+
+Represents a contaminant measurement in the oil sample.
+
+```typescript
+export interface Contaminant {
+  type: string;
+  value: number;
+  unit: string;
+}
+```
+
+### Fields
+
+<ResponseField name="type" type="string" required>
+  Type of contaminant (e.g., "Water", "Fuel", "Glycol", "Soot")
+</ResponseField>
+
+<ResponseField name="value" type="number" required>
+  Measured concentration value
+</ResponseField>
+
+<ResponseField name="unit" type="string" required>
+  Unit of measurement (varies by contaminant type: "%", "ppm", etc.)
+</ResponseField>
+
+### Common Contaminants
+
+- **Water**: Causes rust, oxidation, and reduces lubricating properties
+- **Fuel Dilution**: Reduces viscosity and load-carrying capacity
+- **Glycol**: Indicates coolant leakage
+- **Soot**: Carbon particles from combustion
+
+---
+
+## ParticleCount
+
+Represents particle count measurements at different size ranges.
+
+```typescript
+export interface ParticleCount {
+  size_range: string;
+  count: number;
+  unit: string;
+}
+```
+
+### Fields
+
+<ResponseField name="size_range" type="string" required>
+  Particle size range (e.g., ">4μm", ">6μm", ">14μm", ">21μm")
+</ResponseField>
+
+<ResponseField name="count" type="number" required>
+  Number of particles detected in this size range
+</ResponseField>
+
+<ResponseField name="unit" type="string" required>
+  Unit of measurement (typically "particles/mL")
+</ResponseField>
+
+### ISO Cleanliness Codes
+
+<Note>
+  Particle counts are often expressed using ISO 4406 cleanliness codes:
+  - Format: XX/YY/ZZ
+  - XX: particles ≥4μm per mL
+  - YY: particles ≥6μm per mL
+  - ZZ: particles ≥14μm per mL
+  
+  Example: **18/16/13** indicates moderate contamination
+</Note>
+
+---
+
+## ViscosityLevel
+
+Represents viscosity measurement at a specific temperature.
+
+```typescript
+export interface ViscosityLevel {
+  temperature: number;
+  viscosity: number;
+  unit: string;
+}
+```
+
+### Fields
+
+<ResponseField name="temperature" type="number" required>
+  Temperature at which viscosity was measured (typically in °C or °F)
+</ResponseField>
+
+<ResponseField name="viscosity" type="number" required>
+  Measured viscosity value
+</ResponseField>
+
+<ResponseField name="unit" type="string" required>
+  Unit of measurement (typically "cSt" - centistokes or "mm²/s")
+</ResponseField>
+
+<Note>
+  Viscosity is typically measured at standard temperatures:
+  - **40°C**: Operating temperature viscosity
+  - **100°C**: High temperature viscosity
+  
+  Changes in viscosity indicate oil degradation, contamination, or wrong oil grade.
+</Note>
+
+---
+
+## SampleFilters
+
+Filter options for querying samples.
+
+```typescript
+export interface SampleFilters {
+  search?: string;
+  site_id?: string;
+  asset_id?: string;
+  sampling_point_id?: string;
+  lab_name?: string;
+}
+```
+
+### Fields
+
+<ResponseField name="search" type="string">
+  Search term for serial number or general text search
+</ResponseField>
+
+<ResponseField name="site_id" type="string">
+  Filter by specific site ID
+</ResponseField>
+
+<ResponseField name="asset_id" type="string">
+  Filter by specific asset ID
+</ResponseField>
+
+<ResponseField name="sampling_point_id" type="string">
+  Filter by specific sampling point ID
+</ResponseField>
+
+<ResponseField name="lab_name" type="string">
+  Filter by laboratory name
+</ResponseField>
+
+## Usage Example
+
+```typescript
+import type { Sample, WearMetal, Contaminant } from '@/types';
+
+// Create a sample with analysis results
+const sample: Sample = {
+  id: 'sample_123',
+  site: { id: 'site_1', name: 'Plant A' },
+  asset: { id: 'asset_456', name: 'Motor Pump 01' },
+  sampling_point: { id: 'sp_789', name: 'Main Bearing' },
+  serial_number: 'S-2024-001',
+  date_sampled: Date.now(),
+  lab_name: 'AccuLab Testing',
+  service_meter_reading: '15000',
+  hrs: '500',
+  oil_in_service: '6 months',
+  filter_changed: '3 months ago',
+  oil_drained: 'No',
+  severity: 'Normal',
+  wear_metals: [
+    { element: 'Fe', value: 45, unit: 'ppm' },
+    { element: 'Cu', value: 12, unit: 'ppm' },
+    { element: 'Cr', value: 3, unit: 'ppm' }
+  ],
+  contaminants: [
+    { type: 'Water', value: 0.05, unit: '%' },
+    { type: 'Fuel', value: 1.2, unit: '%' }
+  ],
+  particle_counts: [
+    { size_range: '>4μm', count: 5000, unit: 'particles/mL' },
+    { size_range: '>6μm', count: 2500, unit: 'particles/mL' },
+    { size_range: '>14μm', count: 630, unit: 'particles/mL' }
+  ],
+  viscosity_levels: [
+    { temperature: 40, viscosity: 68, unit: 'cSt' },
+    { temperature: 100, viscosity: 8.5, unit: 'cSt' }
+  ],
+  created_at_datetime: new Date().toISOString(),
+  updated_at_datetime: new Date().toISOString()
+};
+
+// Analyze wear metals
+sample.wear_metals.forEach((metal: WearMetal) => {
+  console.log(`${metal.element}: ${metal.value} ${metal.unit}`);
+});
+```
+
+## Related Types
+
+<CardGroup cols={2}>
+  <Card title="Inventory Types" icon="warehouse" href="/api/types/inventory">
+    Samples are linked to assets and sites
+  </Card>
+  
+  <Card title="Recommendation Types" icon="lightbulb" href="/api/types/recommendations">
+    Sample results may trigger recommendations
+  </Card>
+</CardGroup>

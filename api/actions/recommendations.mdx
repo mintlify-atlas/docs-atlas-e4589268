@@ -1,0 +1,739 @@
+---
+title: Recommendation Actions
+description: Server Actions for maintenance recommendations and analytics
+---
+
+## Overview
+
+Recommendation actions manage maintenance recommendations with severity levels, attachments, and analytics. All functions are located in `src/app/actions/recommendations.ts`.
+
+## Recommendation Operations
+
+### getRecommendationsService
+
+Retrieves a list of recommendations with optional filtering.
+
+<ParamField path="params" type="object" required>
+  Query parameters for filtering (at least one parameter required)
+  
+  <ParamField path="[key: string]" type="string | string[]" optional>
+    Filter parameters (e.g., site_id, severity, status)
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="Recommendation[]">
+  Array of recommendation objects (returns empty array on error)
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+"use server";
+import { getRecommendationsService } from "@/app/actions";
+
+export default async function RecommendationsPage() {
+  const recommendations = await getRecommendationsService({});
+
+  return <RecommendationTable data={recommendations} />;
+}
+```
+
+```typescript Filter by Site
+import { getRecommendationsService } from "@/app/actions";
+
+const recommendations = await getRecommendationsService({
+  site_id: "site-123",
+});
+```
+
+```typescript Filter by Severity
+import { getRecommendationsService } from "@/app/actions";
+
+const criticalRecs = await getRecommendationsService({
+  severity: "critical",
+});
+```
+
+```typescript Multiple Filters
+import { getRecommendationsService } from "@/app/actions";
+
+const recommendations = await getRecommendationsService({
+  site_id: "site-456",
+  severity: "high",
+  status: "open",
+});
+```
+
+```typescript Client Component
+"use client";
+import { getRecommendationsService } from "@/app/actions";
+import { useEffect, useState } from "react";
+
+export function RecommendationList() {
+  const [recommendations, setRecommendations] = useState([]);
+
+  useEffect(() => {
+    getRecommendationsService({}).then(setRecommendations);
+  }, []);
+
+  return (
+    <div>
+      {recommendations.map(rec => (
+        <RecommendationCard key={rec.id} recommendation={rec} />
+      ))}
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+<Note>
+This function returns an empty array on permission errors (403) or network issues instead of throwing. No try-catch needed.
+</Note>
+
+---
+
+### getRecommendationService
+
+Retrieves a single recommendation by ID.
+
+<ParamField path="id" type="string" required>
+  Unique recommendation identifier
+</ParamField>
+
+<ResponseField name="data" type="Recommendation">
+  Complete recommendation object with attachments and relationships
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getRecommendationService } from "@/app/actions";
+
+const recommendation = await getRecommendationService("rec-123");
+
+console.log(recommendation.title);
+console.log(recommendation.severity);
+console.log(recommendation.attachments);
+console.log(recommendation.site.name);
+```
+
+```typescript With Error Handling
+import { getRecommendationService } from "@/app/actions";
+
+try {
+  const recommendation = await getRecommendationService(recId);
+  return <RecommendationDetails recommendation={recommendation} />;
+} catch (error) {
+  console.error("Error fetching recommendation:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### addRecommendationService
+
+Creates a new maintenance recommendation.
+
+<ParamField path="payload" type="AddRecommendationPayload" required>
+  Recommendation creation data
+  
+  <ParamField path="title" type="string" required>
+    Recommendation title
+  </ParamField>
+  
+  <ParamField path="severity" type="'low' | 'medium' | 'high' | 'critical'" required>
+    Severity level
+  </ParamField>
+  
+  <ParamField path="description" type="string" required>
+    Detailed description of the recommendation
+  </ParamField>
+  
+  <ParamField path="attachments" type="RecommendationAttachment[]" optional>
+    Array of file attachments
+    
+    <ParamField path="type" type="string" required>
+      Attachment type (e.g., "document", "image")
+    </ParamField>
+    
+    <ParamField path="url" type="string" required>
+      File URL
+    </ParamField>
+    
+    <ParamField path="name" type="string" required>
+      File name
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="site" type="object" required>
+    <ParamField path="id" type="string" required>
+      Site ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="asset" type="object" required>
+    <ParamField path="id" type="string" required>
+      Asset ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="sampling_point" type="object" required>
+    <ParamField path="id" type="string" required>
+      Sampling point ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="recommender" type="object" required>
+    <ParamField path="id" type="string" required>
+      User ID of recommender
+    </ParamField>
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="statusCode" type="number">
+    HTTP status code
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created recommendation data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addRecommendationService } from "@/app/actions";
+import { AddRecommendationPayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddRecommendationForm() {
+  const handleSubmit = async (data: AddRecommendationPayload) => {
+    const payload: AddRecommendationPayload = {
+      title: data.title,
+      severity: data.severity,
+      description: data.description,
+      site: { id: data.site.id },
+      asset: { id: data.asset.id },
+      sampling_point: { id: data.sampling_point.id },
+      recommender: { id: data.recommender.id },
+      attachments: [],
+    };
+
+    const response = await addRecommendationService(payload);
+    
+    if (response.success) {
+      toast.success("Recommendation created successfully");
+      router.push("/recommendations");
+    } else {
+      toast.error(response.message || "Failed to create recommendation");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript With Attachments
+import { addRecommendationService, uploadImage } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleSubmit = async (data: AddRecommendationPayload) => {
+  // Upload attachments first
+  const attachments = [];
+  
+  for (const file of selectedFiles) {
+    const uploadResponse = await uploadImage(file);
+    if (uploadResponse.success) {
+      attachments.push({
+        type: file.type.startsWith("image/") ? "image" : "document",
+        url: uploadResponse.data.file_key,
+        name: file.name,
+      });
+    }
+  }
+
+  const payload = {
+    title: "Replace oil filter",
+    severity: "high" as const,
+    description: "Iron content exceeded threshold. Recommend filter replacement.",
+    attachments,
+    site: { id: "site-123" },
+    asset: { id: "asset-456" },
+    sampling_point: { id: "sp-789" },
+    recommender: { id: currentUser.id },
+  };
+
+  const response = await addRecommendationService(payload);
+  
+  if (response.success) {
+    toast.success("Recommendation created with attachments");
+  }
+};
+```
+
+```typescript With Severity Levels
+import { addRecommendationService } from "@/app/actions";
+
+// Critical severity
+const criticalRec = {
+  title: "Immediate shutdown required",
+  severity: "critical" as const,
+  description: "Catastrophic failure detected. Immediate action required.",
+  site: { id: "site-123" },
+  asset: { id: "asset-456" },
+  sampling_point: { id: "sp-789" },
+  recommender: { id: userId },
+};
+
+await addRecommendationService(criticalRec);
+
+// Low severity
+const lowRec = {
+  title: "Schedule routine maintenance",
+  severity: "low" as const,
+  description: "Normal wear detected. Schedule routine maintenance.",
+  site: { id: "site-123" },
+  asset: { id: "asset-456" },
+  sampling_point: { id: "sp-789" },
+  recommender: { id: userId },
+};
+
+await addRecommendationService(lowRec);
+```
+
+</CodeGroup>
+
+<Note>
+The payload is wrapped in a `{ recommendation: payload }` object before being sent to the API. This is handled automatically by the service.
+</Note>
+
+---
+
+### editRecommendationService
+
+Updates an existing recommendation.
+
+<ParamField path="id" type="string" required>
+  Recommendation ID to update
+</ParamField>
+
+<ParamField path="payload" type="EditRecommendationPayload" required>
+  Updated recommendation data (same structure as AddRecommendationPayload)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editRecommendationService } from "@/app/actions";
+import { EditRecommendationPayload } from "@/schema";
+import { toast } from "sonner";
+
+const handleUpdate = async (
+  recId: string, 
+  data: EditRecommendationPayload
+) => {
+  const response = await editRecommendationService(recId, data);
+  
+  if (response.success) {
+    toast.success("Recommendation updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+```typescript Update Severity
+import { 
+  getRecommendationService, 
+  editRecommendationService 
+} from "@/app/actions";
+
+const upgradeSeverity = async (recId: string) => {
+  const rec = await getRecommendationService(recId);
+  
+  const response = await editRecommendationService(recId, {
+    ...rec,
+    severity: "critical",
+  });
+  
+  if (response.success) {
+    toast.success("Severity upgraded to critical");
+  }
+};
+```
+
+```typescript Add Attachment
+import { 
+  getRecommendationService, 
+  editRecommendationService,
+  uploadImage 
+} from "@/app/actions";
+
+const addAttachment = async (recId: string, file: File) => {
+  const rec = await getRecommendationService(recId);
+  const uploadResponse = await uploadImage(file);
+  
+  if (!uploadResponse.success) {
+    toast.error("Failed to upload file");
+    return;
+  }
+  
+  const response = await editRecommendationService(recId, {
+    ...rec,
+    attachments: [
+      ...rec.attachments,
+      {
+        type: file.type.startsWith("image/") ? "image" : "document",
+        url: uploadResponse.data.file_key,
+        name: file.name,
+      },
+    ],
+  });
+  
+  if (response.success) {
+    toast.success("Attachment added");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteRecommendationService
+
+Deletes a recommendation.
+
+<ParamField path="id" type="string" required>
+  Recommendation ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteRecommendationService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (recId: string) => {
+  const response = await deleteRecommendationService(recId);
+  
+  if (response.success) {
+    toast.success("Recommendation deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+```typescript With Confirmation
+import { deleteRecommendationService } from "@/app/actions";
+
+const handleDelete = async (recId: string) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this recommendation?"
+  );
+  
+  if (!confirmed) return;
+  
+  const response = await deleteRecommendationService(recId);
+  
+  if (response.success) {
+    toast.success("Recommendation deleted");
+    router.push("/recommendations");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+## Analytics Operations
+
+### getRecommendationAnalyticsService
+
+Retrieves recommendation analytics for dashboard metrics and trend analysis.
+
+<ResponseField name="data" type="RecommendationAnalytics[]">
+  Array of monthly recommendation analytics (returns empty array on error)
+  
+  <ResponseField name="month" type="string">
+    Month identifier (e.g., "2024-01")
+  </ResponseField>
+  
+  <ResponseField name="total_count" type="number">
+    Total recommendations for the month
+  </ResponseField>
+  
+  <ResponseField name="total_trend_percentage" type="number">
+    Percentage change from previous month
+  </ResponseField>
+  
+  <ResponseField name="overdue_count" type="number">
+    Number of overdue recommendations
+  </ResponseField>
+  
+  <ResponseField name="overdue_trend_percentage" type="number">
+    Overdue trend percentage
+  </ResponseField>
+  
+  <ResponseField name="open_overdue_count" type="number">
+    Number of open and overdue recommendations
+  </ResponseField>
+  
+  <ResponseField name="open_overdue_trend_percentage" type="number">
+    Open/overdue trend percentage
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getRecommendationAnalyticsService } from "@/app/actions";
+
+export default async function RecommendationsDashboard() {
+  const analytics = await getRecommendationAnalyticsService();
+
+  if (analytics.length === 0) {
+    return <div>No analytics data available</div>;
+  }
+
+  const currentMonth = analytics[analytics.length - 1];
+
+  return (
+    <div>
+      <MetricCard 
+        title="Total Recommendations" 
+        value={currentMonth.total_count}
+        trend={currentMonth.total_trend_percentage}
+      />
+      <MetricCard 
+        title="Overdue" 
+        value={currentMonth.overdue_count}
+        trend={currentMonth.overdue_trend_percentage}
+      />
+      <MetricCard 
+        title="Open & Overdue" 
+        value={currentMonth.open_overdue_count}
+        trend={currentMonth.open_overdue_trend_percentage}
+      />
+    </div>
+  );
+}
+```
+
+```typescript Trend Chart
+import { getRecommendationAnalyticsService } from "@/app/actions";
+
+export default async function RecommendationTrends() {
+  const analytics = await getRecommendationAnalyticsService();
+
+  const chartData = analytics.map(month => ({
+    month: month.month,
+    total: month.total_count,
+    overdue: month.overdue_count,
+  }));
+
+  return <LineChart data={chartData} />;
+}
+```
+
+```typescript Client Component
+"use client";
+import { getRecommendationAnalyticsService } from "@/app/actions";
+import { useEffect, useState } from "react";
+
+export function RecommendationAnalytics() {
+  const [analytics, setAnalytics] = useState([]);
+
+  useEffect(() => {
+    getRecommendationAnalyticsService().then(setAnalytics);
+  }, []);
+
+  if (analytics.length === 0) return <Loading />;
+
+  const latest = analytics[analytics.length - 1];
+
+  return (
+    <div>
+      <h2>Recommendation Trends</h2>
+      <p>Total: {latest.total_count}</p>
+      <p>Trend: {latest.total_trend_percentage}%</p>
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+<Note>
+Returns an empty array on permission errors (403), non-JSON responses, or network issues instead of throwing. Check array length before accessing data.
+</Note>
+
+## Common Workflows
+
+### Create Recommendation from Sample Analysis
+
+<CodeGroup>
+
+```typescript Sample Analysis Workflow
+import { 
+  getSampleService, 
+  addRecommendationService,
+  getAssetService 
+} from "@/app/actions";
+import { toast } from "sonner";
+
+// 1. Get sample data
+const sample = await getSampleService(sampleId);
+
+// 2. Analyze severity
+let severity: "low" | "medium" | "high" | "critical" = "low";
+let title = "";
+let description = "";
+
+if (sample.severity === "Critical") {
+  severity = "critical";
+  title = "Immediate action required - Critical sample results";
+  description = `Critical wear metals detected in sample ${sample.serial_number}.`;
+} else if (sample.severity === "Warning") {
+  severity = "high";
+  title = "Warning - Elevated wear metals";
+  description = `Warning levels detected in sample ${sample.serial_number}.`;
+}
+
+// 3. Create recommendation
+const response = await addRecommendationService({
+  title,
+  severity,
+  description,
+  site: { id: sample.site.id },
+  asset: { id: sample.asset.id },
+  sampling_point: { id: sample.sampling_point.id },
+  recommender: { id: currentUser.id },
+});
+
+if (response.success) {
+  toast.success("Recommendation created from sample analysis");
+}
+```
+
+</CodeGroup>
+
+### Link Recommendation to Alarm
+
+<CodeGroup>
+
+```typescript Link Workflow
+import { 
+  getAlarmService, 
+  editAlarmService,
+  addRecommendationService 
+} from "@/app/actions";
+
+// 1. Get alarm
+const alarm = await getAlarmService(alarmId);
+
+// 2. Create recommendation
+const recResponse = await addRecommendationService({
+  title: `Address alarm: ${alarm.parameter}`,
+  severity: "high",
+  description: `Recommendation for alarm detected on ${alarm.first_detected}`,
+  site: { id: alarm.site.id },
+  asset: { id: assetId },
+  sampling_point: { id: samplingPointId },
+  recommender: { id: currentUser.id },
+});
+
+if (!recResponse.success) {
+  toast.error("Failed to create recommendation");
+  return;
+}
+
+// 3. Link to alarm
+const recId = recResponse.data?.data?.id;
+if (recId) {
+  const linkResponse = await editAlarmService(alarmId, {
+    ...alarm,
+    linked_recommendations: [
+      ...alarm.linked_recommendations,
+      { id: recId },
+    ],
+  });
+  
+  if (linkResponse.success) {
+    toast.success("Recommendation created and linked to alarm");
+  }
+}
+```
+
+</CodeGroup>
+
+### Severity-based Filtering
+
+<CodeGroup>
+
+```typescript Filter by Severity
+import { getRecommendationsService } from "@/app/actions";
+
+// Get critical and high severity recommendations
+const [critical, high] = await Promise.all([
+  getRecommendationsService({ severity: "critical" }),
+  getRecommendationsService({ severity: "high" }),
+]);
+
+const urgentRecommendations = [...critical, ...high];
+
+console.log(`${urgentRecommendations.length} urgent recommendations`);
+```
+
+</CodeGroup>
+
+## Type Definitions
+
+Import types from `@/types` and schemas from `@/schema`:
+
+```typescript
+import { 
+  Recommendation, 
+  RecommendationAttachment,
+  RecommendationAnalytics 
+} from "@/types";
+import { 
+  AddRecommendationPayload, 
+  EditRecommendationPayload, 
+  ADD_RECOMMENDATION_SCHEMA 
+} from "@/schema";
+import { ApiResponse } from "@/app/actions";
+```
+
+## Related Actions
+
+- [Alarm Actions](/api/actions/alarms) - Link recommendations to alarms
+- [Sample Actions](/api/actions/samples) - Create recommendations from samples
+- [Type Definitions](/api/types/recommendations) - Recommendation type definitions

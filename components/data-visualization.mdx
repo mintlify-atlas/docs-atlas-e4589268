@@ -1,0 +1,517 @@
+---
+title: Data Visualization Components
+description: Chart components for displaying metrics, trends, and analytics using Recharts library
+---
+
+## Overview
+
+MicroCBM provides three chart components built on the Recharts library for visualizing maintenance data, trends, and analytics:
+
+- **AreaChart** - Time series data with filled areas
+- **BarChart** - Comparative metrics visualization
+- **PieChart** - Proportional data display with legend
+
+All chart components are client-side rendered and fully responsive.
+
+## AreaChart
+
+Line chart with gradient-filled areas for displaying time series data like oil sample measurements over time.
+
+### Props
+
+<ParamField path="data" type="ChartData[]" required>
+  Array of data points with structure: `{ date: string, series1: number, series2: number }`
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes for the chart container
+</ParamField>
+
+### Data Structure
+
+```typescript
+interface ChartData {
+  date: string;        // ISO date string or date format
+  series1: number;     // First data series value
+  series2: number;     // Second data series value
+}
+```
+
+### Usage Example
+
+```tsx src/app/(home)/samples/components/TrendChart.tsx
+"use client";
+
+import { AreaChart } from "@/components";
+
+export function OilSampleTrendChart({ samples }) {
+  // Transform sample data into chart format
+  const chartData = samples.map((sample) => ({
+    date: sample.sample_date,
+    series1: sample.wear_metals.iron,
+    series2: sample.wear_metals.copper,
+  }));
+  
+  return (
+    <div className="bg-white p-6 rounded-lg border">
+      <h3 className="text-lg font-semibold mb-4">Wear Metal Trends</h3>
+      <AreaChart data={chartData} />
+    </div>
+  );
+}
+```
+
+### Features
+
+- Gradient fills for visual appeal
+- Automatic date formatting on X-axis
+- PPM (parts per million) units on Y-axis
+- Interactive tooltips with hover states
+- Responsive container sizing
+- Smooth curve transitions
+
+### Customization
+
+The AreaChart uses predefined gradient colors:
+
+- **Series 1**: Gray gradient (`#A0A0A0`)
+- **Series 2**: Light gray gradient (`#D0D0D0`)
+
+<Note>
+  The Y-axis domain is fixed at [0, 30] PPM. To customize the range, modify the `domain` prop in the source component.
+</Note>
+
+## BarChart
+
+Bar chart component for comparing metrics across time periods or categories.
+
+### Props
+
+<ParamField path="data" type="ChartData[]" required>
+  Array of data points with structure: `{ month: string, value1: number, value2?: number }`
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  Chart title displayed at the top
+</ParamField>
+
+<ParamField path="subtitle" type="string" required>
+  Subtitle or description text
+</ParamField>
+
+<ParamField path="value1Label" type="string" default="Series 1">
+  Label for the first data series in tooltips
+</ParamField>
+
+<ParamField path="value2Label" type="string" default="Series 2">
+  Label for the second data series in tooltips
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes for the chart container
+</ParamField>
+
+<ParamField path="timeFilterTabs" type="Array<{ value: string, label: string }>">
+  Optional filter tabs for time range selection
+</ParamField>
+
+<ParamField path="onTimeFilterChange" type="(value: string) => void">
+  Callback when time filter is changed
+</ParamField>
+
+<ParamField path="selectedTimeFilter" type="string">
+  Currently selected time filter value
+</ParamField>
+
+### Data Structure
+
+```typescript
+interface ChartData {
+  month: string;       // Format: "YYYY-MM" (e.g., "2025-01")
+  value1: number;      // First series value
+  value2?: number;     // Optional second series value
+}
+```
+
+### Usage Example
+
+<CodeGroup>
+```tsx Basic Usage
+"use client";
+
+import { BarChart } from "@/components";
+
+export function AlarmTrendsChart() {
+  const data = [
+    { month: "2025-01", value1: 45, value2: 32 },
+    { month: "2025-02", value1: 52, value2: 28 },
+    { month: "2025-03", value1: 38, value2: 35 },
+  ];
+  
+  return (
+    <BarChart
+      data={data}
+      title="Alarm Trends"
+      subtitle="Monthly alarm count over time"
+      value1Label="Total Alarms"
+      value2Label="Critical Alarms"
+    />
+  );
+}
+```
+
+```tsx With Time Filters
+"use client";
+
+import { BarChart } from "@/components";
+import { useState } from "react";
+
+export function RecommendationChart({ recommendations }) {
+  const [timeFilter, setTimeFilter] = useState("6m");
+  
+  const timeFilterTabs = [
+    { value: "3m", label: "3 Months" },
+    { value: "6m", label: "6 Months" },
+    { value: "1y", label: "1 Year" },
+  ];
+  
+  // Filter data based on selected time range
+  const filteredData = filterByTimeRange(recommendations, timeFilter);
+  
+  return (
+    <BarChart
+      data={filteredData}
+      title="Recommendations Created"
+      subtitle="Track maintenance recommendations over time"
+      value1Label="Recommendations"
+      timeFilterTabs={timeFilterTabs}
+      onTimeFilterChange={setTimeFilter}
+      selectedTimeFilter={timeFilter}
+      className="shadow-sm"
+    />
+  );
+}
+```
+</CodeGroup>
+
+### Features
+
+- Automatic month name formatting ("2025-01" → "Jan")
+- Dynamic Y-axis scaling based on data
+- Grouped bars for comparing two series
+- Interactive tooltips with data labels
+- Optional time filter controls
+- Border and padding styling
+
+### Styling
+
+- **Bar Colors**: Black (`#000`) for value1, dark gray (`#333`) for value2
+- **Bar Width**: Fixed at 20px
+- **Height**: 320px (80 in Tailwind units)
+- **Grid**: Horizontal lines with 3-3 dash pattern
+
+<Note>
+  If your data contains only `value1`, the second bar series will not render. The chart automatically detects and handles single-series data.
+</Note>
+
+## PieChart
+
+Donut chart component for displaying proportional data with a center label and legend.
+
+### Props
+
+<ParamField path="data" type="PieChartData[]" required>
+  Array of data segments with structure: `{ name: string, value: number, color: string }`
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  Chart title
+</ParamField>
+
+<ParamField path="subtitle" type="string" required>
+  Subtitle text
+</ParamField>
+
+<ParamField path="centerValue" type="number" required>
+  Value displayed in the center of the donut
+</ParamField>
+
+<ParamField path="centerLabel" type="string" required>
+  Label text for the center value
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes
+</ParamField>
+
+### Data Structure
+
+```typescript
+interface PieChartData {
+  name: string;        // Segment label
+  value: number;       // Segment value
+  color: string;       // Hex color code (e.g., "#10B981")
+  [key: string]: string | number;  // Additional custom properties
+}
+```
+
+### Usage Example
+
+```tsx src/app/(home)/samples/components/SampleStatusChart.tsx
+"use client";
+
+import { PieChart } from "@/components";
+
+export function SampleStatusDistribution({ samples }) {
+  const statusCounts = samples.reduce(
+    (acc, sample) => {
+      acc[sample.status] = (acc[sample.status] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+  
+  const chartData = [
+    { 
+      name: "Normal", 
+      value: statusCounts.normal || 0, 
+      color: "#10B981" // green
+    },
+    { 
+      name: "Warning", 
+      value: statusCounts.warning || 0, 
+      color: "#F59E0B" // amber
+    },
+    { 
+      name: "Critical", 
+      value: statusCounts.critical || 0, 
+      color: "#EF4444" // red
+    },
+  ];
+  
+  const totalSamples = samples.length;
+  
+  return (
+    <PieChart
+      data={chartData}
+      title="Sample Status Distribution"
+      subtitle="Overview of all oil samples"
+      centerValue={totalSamples}
+      centerLabel="Total Samples"
+    />
+  );
+}
+```
+
+### Features
+
+- Donut chart with center content area
+- Custom color per segment
+- Interactive hover tooltips with percentages
+- Legend with color indicators
+- Export button (UI only, implement handler separately)
+- Date picker integration
+- Responsive sizing
+
+### Layout
+
+The PieChart component includes:
+
+1. **Header Section** - Title, subtitle, export button, and date picker
+2. **Chart Section** - Donut chart with center value/label (256x256px)
+3. **Legend Section** - Horizontal legend with color swatches
+
+### Customization
+
+<CodeGroup>
+```tsx Custom Colors
+const severityColors = {
+  low: "#22C55E",      // green-500
+  medium: "#F59E0B",   // amber-500
+  high: "#EF4444",     // red-500
+  critical: "#991B1B", // red-900
+};
+
+const data = [
+  { name: "Low", value: 120, color: severityColors.low },
+  { name: "Medium", value: 45, color: severityColors.medium },
+  { name: "High", value: 18, color: severityColors.high },
+  { name: "Critical", value: 3, color: severityColors.critical },
+];
+```
+
+```tsx Without Optional Controls
+<PieChart
+  data={data}
+  title="Alarm Distribution"
+  subtitle="By severity level"
+  centerValue={186}
+  centerLabel="Total Alarms"
+  className="col-span-2"
+/>
+```
+</CodeGroup>
+
+<Note>
+  The tooltip shows both absolute values and percentages. Percentages are calculated automatically from the data.
+</Note>
+
+## Common Patterns
+
+### Loading States
+
+Handle loading states while fetching chart data:
+
+```tsx
+import { BarChart } from "@/components";
+import { Loader } from "@/components";
+
+export function DashboardChart({ isLoading, data }) {
+  if (isLoading) {
+    return (
+      <div className="h-80 flex items-center justify-center">
+        <Loader />
+      </div>
+    );
+  }
+  
+  return (
+    <BarChart
+      data={data}
+      title="Monthly Trends"
+      subtitle="Asset performance metrics"
+    />
+  );
+}
+```
+
+### Empty States
+
+Display appropriate messages when no data is available:
+
+```tsx
+import { PieChart } from "@/components";
+import { EmptyState } from "@/components";
+
+export function StatusChart({ data }) {
+  if (!data || data.length === 0) {
+    return (
+      <EmptyState
+        title="No Data Available"
+        description="Start collecting samples to see distribution"
+      />
+    );
+  }
+  
+  return (
+    <PieChart
+      data={data}
+      title="Status Distribution"
+      subtitle="Current sample status"
+      centerValue={data.reduce((sum, d) => sum + d.value, 0)}
+      centerLabel="Total"
+    />
+  );
+}
+```
+
+### Responsive Layouts
+
+Use grid layouts to arrange multiple charts:
+
+```tsx
+export function AnalyticsDashboard({ data }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <BarChart
+        data={data.trends}
+        title="Monthly Trends"
+        subtitle="Asset metrics over time"
+      />
+      <PieChart
+        data={data.distribution}
+        title="Asset Distribution"
+        subtitle="By asset type"
+        centerValue={data.total}
+        centerLabel="Total Assets"
+      />
+      <div className="lg:col-span-2">
+        <AreaChart data={data.timeSeries} />
+      </div>
+    </div>
+  );
+}
+```
+
+## Recharts Integration
+
+All chart components use [Recharts](https://recharts.org/) internally. Key Recharts components used:
+
+- `ResponsiveContainer` - Automatic resizing
+- `CartesianGrid` - Grid lines
+- `XAxis` / `YAxis` - Axis configuration
+- `Tooltip` - Interactive hover tooltips
+- `Area` / `Bar` / `Pie` - Chart renderers
+
+### Performance Considerations
+
+- Charts are client-side only (use `"use client"` directive)
+- Large datasets may impact performance
+- Consider data aggregation for datasets over 100 points
+- Use React.memo() for charts that re-render frequently
+
+```tsx
+import { AreaChart } from "@/components";
+import { memo } from "react";
+
+export const MemoizedChart = memo(AreaChart);
+```
+
+## Styling Guidelines
+
+### Colors
+
+Use consistent color schemes across charts:
+
+```typescript
+// Color constants
+const CHART_COLORS = {
+  primary: "#000000",      // Black
+  secondary: "#333333",    // Dark gray
+  success: "#10B981",      // Green
+  warning: "#F59E0B",      // Amber
+  danger: "#EF4444",       // Red
+  info: "#3B82F6",         // Blue
+};
+```
+
+### Typography
+
+Chart text uses these font sizes:
+
+- **Title**: `text-lg` (18px) with `font-semibold`
+- **Subtitle**: `text-sm` (14px) with `text-gray-500`
+- **Axis Labels**: 12px font size
+- **Tooltips**: `text-xs` (12px)
+
+## Accessibility
+
+- All charts include proper ARIA labels via Recharts
+- Tooltips provide text alternatives for visual data
+- Color is not the only means of conveying information (labels included)
+- Consider providing data tables as alternatives for screen readers
+
+```tsx
+<BarChart
+  data={data}
+  title="Alarm Trends"
+  subtitle="Monthly alarm count over time"
+  aria-label="Bar chart showing monthly alarm trends"
+/>
+```
+
+## Next Steps
+
+- [UI Components](/components/ui-components) - Buttons, inputs, and more
+- [Form Inputs](/components/form-inputs) - Specialized form components
+- [Development Guide](/development/project-structure) - Component architecture

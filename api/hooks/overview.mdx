@@ -1,0 +1,68 @@
+---
+title: Custom Hooks Overview
+description: Reusable React hooks for authentication, state management, and file handling in MicroCBM
+---
+
+MicroCBM provides a collection of custom React hooks to simplify common patterns in the application. These hooks handle permission-based content guarding, URL-synced state, debounced input, and presigned URL generation for secure file access.
+
+## Available Hooks
+
+<CardGroup cols={2}>
+  <Card title="useContentGuard" icon="shield-check" href="/api/hooks/use-content-guard">
+    Permission-based access control with role checking and user session management
+  </Card>
+  
+  <Card title="useDebouncedState" icon="clock" href="/api/hooks/use-debounced-state">
+    Debounced state management for input fields with delayed callbacks
+  </Card>
+  
+  <Card title="useUrlState" icon="link" href="/api/hooks/use-url-state">
+    Synchronize component state with URL search parameters
+  </Card>
+  
+  <Card title="usePresignedUrl" icon="file" href="/api/hooks/use-presigned-url">
+    Fetch presigned URLs for secure S3 file access with automatic loading states
+  </Card>
+</CardGroup>
+
+## Hook Categories
+
+### Authentication & Authorization
+
+**useContentGuard** provides comprehensive permission checking for route and component-level access control. It fetches user session data, validates permissions against required roles, and provides loading states during authentication checks.
+
+### State Management
+
+**useDebouncedState** simplifies debounced input handling for search fields and forms, reducing unnecessary API calls or re-renders.
+
+**useUrlState** synchronizes component state with URL query parameters, enabling shareable links and browser navigation for filters and tabs.
+
+### File Management
+
+**usePresignedUrl** handles the fetching of presigned URLs for secure file access, managing loading and error states automatically.
+
+## Usage Pattern
+
+All hooks are exported from the central hooks index:
+
+```typescript
+import { useContentGuard, useDebouncedState, useUrlState, usePresignedUrl } from "@/hooks";
+```
+
+## Client-Side Only
+
+<Note>
+  All hooks are marked with `"use client"` and must be used in Client Components. They rely on React hooks like `useState`, `useEffect`, and Next.js navigation hooks that only work on the client side.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Server Actions" icon="server" href="/api/actions/overview">
+    Learn about server-side data fetching and mutations
+  </Card>
+  
+  <Card title="Type Definitions" icon="code" href="/api/types/overview">
+    Explore TypeScript types used throughout the application
+  </Card>
+</CardGroup>

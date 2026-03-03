@@ -1,0 +1,727 @@
+---
+title: State Management
+description: Managing application state with Zustand, React Query, and URL state
+icon: database
+---
+
+## Overview
+
+MicroCBM uses a layered approach to state management, choosing the right tool for each type of state:
+
+<CardGroup cols={3}>
+  <Card title="Zustand" icon="box">
+    Global UI state (sidebar, modals)
+  </Card>
+  <Card title="React Query" icon="server">
+    Server state (API data, caching)
+  </Card>
+  <Card title="URL State" icon="link">
+    Filter state (search, pagination)
+  </Card>
+</CardGroup>
+
+## Zustand Stores
+
+Zustand provides minimal global state management for UI state that needs to persist across components.
+
+### Store Structure
+
+```
+src/stores/
+├── index.ts             # Re-exports all stores
+└── sidebar.ts           # Sidebar collapse state
+```
+
+### Sidebar Store
+
+The sidebar store manages the sidebar's open/closed state with persistence:
+
+```typescript
+// src/stores/sidebar.ts:1
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+interface SidebarState {
+  isOpen: boolean;
+  toggle: () => void;
+  open: () => void;
+  close: () => void;
+}
+
+export const useSidebarStore = create<SidebarState>()(
+  persist(
+    (set) => ({
+      isOpen: false, // default to open
+      toggle: () => set((state) => ({ isOpen: !state.isOpen })),
+      open: () => set({ isOpen: true }),
+      close: () => set({ isOpen: false }),
+    }),
+    {
+      name: "microcbm-sidebar-state",
+    }
+  )
+);
+```
+
+<Tabs>
+  <Tab title="Usage">
+    ```typescript
+    "use client";
+    import { useSidebarStore } from "@/stores";
+    
+    export function SidebarToggle() {
+      const { isOpen, toggle } = useSidebarStore();
+      
+      return (
+        <button onClick={toggle}>
+          {isOpen ? "Close" : "Open"} Sidebar
+        </button>
+      );
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Features">
+    - **Persistence**: State persists in localStorage
+    - **Minimal re-renders**: Only components using the store re-render
+    - **TypeScript-first**: Full type safety
+    - **Simple API**: No boilerplate required
+  </Tab>
+  
+  <Tab title="Middleware">
+    The `persist` middleware automatically:
+    - Saves state to localStorage under `"microcbm-sidebar-state"`
+    - Restores state on page load
+    - Handles serialization/deserialization
+    - Syncs across browser tabs
+  </Tab>
+</Tabs>
+
+### Creating New Stores
+
+Follow this pattern to create additional Zustand stores:
+
+<Steps>
+  <Step title="Define the state interface">
+    ```typescript
+    interface MyState {
+      count: number;
+      increment: () => void;
+      decrement: () => void;
+    }
+    ```
+  </Step>
+  
+  <Step title="Create the store">
+    ```typescript
+    import { create } from "zustand";
+    
+    export const useMyStore = create<MyState>()((set) => ({
+      count: 0,
+      increment: () => set((state) => ({ count: state.count + 1 })),
+      decrement: () => set((state) => ({ count: state.count - 1 })),
+    }));
+    ```
+  </Step>
+  
+  <Step title="Add persistence if needed">
+    ```typescript
+    import { create } from "zustand";
+    import { persist } from "zustand/middleware";
+    
+    export const useMyStore = create<MyState>()(
+      persist(
+        (set) => ({
+          count: 0,
+          increment: () => set((state) => ({ count: state.count + 1 })),
+          decrement: () => set((state) => ({ count: state.count - 1 })),
+        }),
+        {
+          name: "my-store-state",
+        }
+      )
+    );
+    ```
+  </Step>
+  
+  <Step title="Export from index.ts">
+    ```typescript
+    // src/stores/index.ts
+    export * from "./sidebar";
+    export * from "./my-store";
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  MicroCBM intentionally uses minimal global state. Most state is managed at the component level, in the URL, or via React Query.
+</Note>
+
+## React Query (TanStack Query)
+
+React Query manages server state, providing caching, background updates, and automatic refetching.
+
+### Query Setup
+
+While MicroCBM primarily uses Server Components for data fetching, React Query is available for client-side data needs.
+
+**Key features used:**
+- Automatic caching
+- Background refetching
+- Optimistic updates
+- Mutation management
+
+### Custom Hooks with React Query
+
+Feature modules can define custom hooks for data fetching:
+
+```typescript
+// src/app/(home)/alarms/hooks/useAlarmManagement.tsx:1
+"use client";
+
+import { usePersistedModalState, useReducerSpread } from "@/hooks";
+import { DEFAULT_QUERY } from "@/utils/constants";
+import { MODALS } from "@/utils/constants/modals";
+
+export function useAlarmManagementBase() {
+  const [query, setQuery] = useReducerSpread(DEFAULT_QUERY);
+
+  const modal = usePersistedModalState({
+    paramName: MODALS.ALARM.PARAM_NAME,
+  });
+
+  return {
+    modal,
+    query,
+    setQuery,
+  };
+}
+```
+
+### Server Actions
+
+MicroCBM primarily uses Server Actions for data mutations:
+
+```typescript
+// src/app/actions/inventory.ts:23
+async function getAssetsService(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  [key: string]: string | number | string[] | undefined;
+}): Promise<GetAssetsResult> {
+  try {
+    const searchParams = new URLSearchParams();
+    if (params?.page != null) searchParams.set("page", String(params.page));
+    if (params?.limit != null) searchParams.set("limit", String(params.limit));
+    if (params?.search) searchParams.set("search", String(params.search));
+    Object.entries(params ?? {}).forEach(([key, value]) => {
+      if (key === "page" || key === "limit" || key === "search") return;
+      if (value !== undefined && value !== "")
+        searchParams.set(key, Array.isArray(value) ? value[0] : String(value));
+    });
+    const queryString = searchParams.toString();
+    const url = `${commonEndpoint}assets${queryString ? `?${queryString}` : ""}`;
+
+    const response = await requestWithAuth(url, { method: "GET" });
+
+    if (response.status === 403) {
+      console.warn("User does not have permission to access assets");
+      return { data: [], meta: { page: 1, limit: 10, total: 0, total_pages: 0, has_next: false, has_prev: false } };
+    }
+
+    if (!response.ok) {
+      console.error("API Error:", response.status, response.statusText);
+      throw new Error(
+        `Failed to fetch assets: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const json = await response.json();
+    const data = json?.data ?? [];
+    // ... rest of implementation
+  } catch (error) {
+    console.error("Error fetching assets:", error);
+    throw error;
+  }
+}
+```
+
+<Note>
+  Server Actions are marked with `"use server"` and run on the server. They can be called directly from Server Components or Client Components.
+</Note>
+
+## URL State Management
+
+URL state provides shareable, bookmarkable application state for filters, search, and pagination.
+
+### useUrlState Hook
+
+The custom `useUrlState` hook manages URL query parameters:
+
+```typescript
+// src/hooks/useUrlState.ts:1
+"use client";
+
+import { useCallback, useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+export function useUrlState(key: string, defaultValue = "") {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const value = useMemo(() => {
+    return searchParams?.get(key) ?? defaultValue;
+  }, [searchParams, key, defaultValue]);
+
+  const setValue = useCallback(
+    (newValue: string) => {
+      const params = new URLSearchParams(searchParams?.toString());
+
+      if (newValue) {
+        params.set(key, newValue);
+      } else {
+        params.delete(key);
+      }
+
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, key, pathname, router]
+  );
+
+  return [value, setValue] as const;
+}
+```
+
+**Usage example:**
+
+```typescript
+"use client";
+import { useUrlState } from "@/hooks";
+
+function AssetFilters() {
+  const [status, setStatus] = useUrlState("status", "all");
+  const [search, setSearch] = useUrlState("search", "");
+  
+  return (
+    <div>
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search assets..."
+      />
+      
+      <select value={status} onChange={(e) => setStatus(e.target.value)}>
+        <option value="all">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+  );
+}
+```
+
+<Tabs>
+  <Tab title="Benefits">
+    - **Shareable**: Users can share filtered views via URL
+    - **Bookmarkable**: Filtered states can be bookmarked
+    - **Browser history**: Back/forward buttons work naturally
+    - **SSR-friendly**: Server can render correct state from URL
+  </Tab>
+  
+  <Tab title="Best Practices">
+    - Use for filters, search, pagination, and sorting
+    - Keep query parameter names descriptive
+    - Provide sensible default values
+    - Clear parameters when resetting filters
+    - Use `router.replace()` to avoid polluting history
+  </Tab>
+  
+  <Tab title="Performance">
+    - The hook uses `useMemo` to prevent unnecessary re-renders
+    - `setValue` is memoized with `useCallback`
+    - `scroll: false` prevents scroll jumps on updates
+    - URL updates don't cause full page reloads
+  </Tab>
+</Tabs>
+
+### Server-Side URL State
+
+Server Components access URL state via `searchParams`:
+
+```typescript
+export default async function AssetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(String(params?.page ?? 1), 10) || 1);
+  const limit = Math.max(1, Math.min(100, parseInt(String(params?.limit ?? 10), 10) || 10);
+  const search = typeof params?.search === "string" ? params.search : "";
+  
+  // Use params for data fetching
+  const { data: assets, meta } = await getAssetsService({ page, limit, search });
+  
+  return <AssetTable data={assets} meta={meta} />;
+}
+```
+
+## Component State
+
+For local component state, use React's built-in hooks.
+
+### useState
+
+For simple local state:
+
+```typescript
+"use client";
+import { useState } from "react";
+
+function Modal() {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <>
+      <button onClick={() => setIsOpen(true)}>Open</button>
+      {isOpen && <div>Modal Content</div>}
+    </>
+  );
+}
+```
+
+### useReducer
+
+For complex state logic:
+
+```typescript
+"use client";
+import { useReducer } from "react";
+
+type State = { count: number; step: number };
+type Action = 
+  | { type: "increment" }
+  | { type: "decrement" }
+  | { type: "setStep"; step: number };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "increment":
+      return { ...state, count: state.count + state.step };
+    case "decrement":
+      return { ...state, count: state.count - state.step };
+    case "setStep":
+      return { ...state, step: action.step };
+    default:
+      return state;
+  }
+}
+
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, { count: 0, step: 1 });
+  
+  return (
+    <div>
+      <p>Count: {state.count}</p>
+      <button onClick={() => dispatch({ type: "increment" })}>+</button>
+      <button onClick={() => dispatch({ type: "decrement" })}>-</button>
+    </div>
+  );
+}
+```
+
+## Custom Hooks
+
+MicroCBM includes several custom hooks for common patterns:
+
+### useDebouncedState
+
+Debounces state updates (useful for search inputs):
+
+```typescript
+// src/hooks/useDebouncedState.ts:1
+"use client";
+import React, { useCallback, useRef, useState } from "react";
+
+interface DebouncedStateOptions<T> {
+  initialValue: T;
+  debounceTime?: number;
+  onChange: (value: T) => void;
+}
+
+export function useDebouncedState<T>({
+  initialValue,
+  debounceTime = 500,
+  onChange,
+}: DebouncedStateOptions<T>) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [value, setValue] = useState<T>(initialValue);
+
+  const updateOutside = useCallback(
+    (newValue: T) => {
+      clearTimeout(timeoutRef.current!);
+      timeoutRef.current = setTimeout(() => {
+        onChange(newValue);
+      }, debounceTime);
+    },
+    [debounceTime, onChange]
+  );
+
+  function onChangeHandler(event: React.ChangeEvent<HTMLInputElement>) {
+    const newValue = event.target.value as T;
+    setValue(newValue);
+    updateOutside(newValue);
+  }
+
+  return {
+    value,
+    onChangeHandler,
+  };
+}
+```
+
+**Usage:**
+
+```typescript
+"use client";
+import { useDebouncedState } from "@/hooks";
+import { useRouter } from "next/navigation";
+
+function SearchInput() {
+  const router = useRouter();
+  
+  const { value, onChangeHandler } = useDebouncedState({
+    initialValue: "",
+    debounceTime: 300,
+    onChange: (searchValue) => {
+      // Update URL after debounce
+      router.replace(`?search=${searchValue}`);
+    },
+  });
+  
+  return <input type="search" value={value} onChange={onChangeHandler} />;
+}
+```
+
+### useContentGuard
+
+Checks user permissions for content access:
+
+```typescript
+// src/hooks/useContentGuard.ts:17
+export function useContentGuard(
+  permission?: PermissionType | PermissionType[] | string | string[],
+) {
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch user session and permissions
+    const fetchUserAndPermissions = async () => {
+      try {
+        const sessionResponse = await fetch("/api/session");
+        if (!sessionResponse.ok) {
+          setUser(null);
+          setUserPermissions([]);
+          setIsLoading(false);
+          return;
+        }
+
+        const sessionData = await sessionResponse.json();
+        const userData = sessionData.user as SessionUser;
+
+        if (!userData) {
+          setUser(null);
+          setUserPermissions([]);
+          setIsLoading(false);
+          return;
+        }
+
+        setUser(userData);
+        // ... permission fetching logic
+      } catch (error) {
+        console.error("Error fetching user session or permissions:", error);
+        setUser(null);
+        setUserPermissions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserAndPermissions();
+  }, []);
+
+  // ... permission checking logic
+
+  return { isAllowed, isLoading: false, userPermissions, user };
+}
+```
+
+**Usage:**
+
+```typescript
+"use client";
+import { useContentGuard } from "@/hooks";
+
+function AdminPanel() {
+  const { isAllowed, isLoading } = useContentGuard("users:manage");
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (!isAllowed) return <div>Access denied</div>;
+  
+  return <div>Admin Panel Content</div>;
+}
+```
+
+### usePresignedUrl
+
+Fetches presigned URLs for file access:
+
+```typescript
+// src/hooks/usePresignedUrl.ts:1
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface PresignedUrlState {
+  url: string | null;
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+}
+
+export function usePresignedUrl(
+  fileKey?: string | null,
+  shouldFetch: boolean = true
+): PresignedUrlState {
+  const [url, setUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchUrl = async () => {
+    if (!fileKey || !shouldFetch) {
+      setUrl(null);
+      setError(null);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/files/presigned?fileKey=${encodeURIComponent(fileKey)}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch file URL");
+      }
+
+      const data = await response.json();
+      setUrl(data?.data?.presigned_url ?? null);
+    } catch (err) {
+      console.error("Error fetching presigned URL:", err);
+      setError("Unable to load file");
+      setUrl(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUrl();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileKey, shouldFetch]);
+
+  return { url, isLoading, error, refetch: fetchUrl };
+}
+```
+
+**Usage:**
+
+```typescript
+"use client";
+import { usePresignedUrl } from "@/hooks";
+
+function FileViewer({ fileKey }: { fileKey: string }) {
+  const { url, isLoading, error } = usePresignedUrl(fileKey);
+  
+  if (isLoading) return <div>Loading file...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!url) return null;
+  
+  return <img src={url} alt="File" />;
+}
+```
+
+## State Management Decision Tree
+
+<Steps>
+  <Step title="Is it server data?">
+    Use Server Components with Server Actions
+  </Step>
+  
+  <Step title="Is it filter/search/pagination state?">
+    Use URL state with `useUrlState`
+  </Step>
+  
+  <Step title="Is it UI state that needs to persist?">
+    Use Zustand with persist middleware
+  </Step>
+  
+  <Step title="Is it local component state?">
+    Use `useState` or `useReducer`
+  </Step>
+  
+  <Step title="Is it form state?">
+    Use React Hook Form (see Forms & Validation)
+  </Step>
+</Steps>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Minimize global state">
+    Only use global state when truly necessary. Most state should be:
+    - Server state (fetched per-route)
+    - URL state (filters, search)
+    - Local component state
+  </Accordion>
+  
+  <Accordion title="Prefer Server Components">
+    Use Server Components for data fetching by default. Only use client-side fetching when:
+    - User interaction triggers data updates
+    - Real-time updates are needed
+    - Optimistic UI is required
+  </Accordion>
+  
+  <Accordion title="Use URL state for shareability">
+    Store filter, search, and pagination state in the URL:
+    - Users can share links
+    - Back/forward buttons work correctly
+    - State persists on refresh
+  </Accordion>
+  
+  <Accordion title="Keep stores focused">
+    Each Zustand store should have a single responsibility. Don't create a monolithic store.
+  </Accordion>
+  
+  <Accordion title="Type everything">
+    Always define TypeScript interfaces for your state. This provides autocomplete and catches errors early.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Forms & Validation" icon="square-check" href="/development/forms-validation">
+    Learn about React Hook Form and Zod schemas
+  </Card>
+  <Card title="Hooks Reference" icon="code" href="/api/hooks/overview">
+    Explore all custom hooks
+  </Card>
+</CardGroup>

@@ -1,80 +1,228 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get MicroCBM up and running in under 5 minutes with this step-by-step guide.
 ---
 
-## Get started in three steps
+This quickstart guide will help you set up MicroCBM locally and access the platform. By the end, you'll have the application running and be able to log in to the dashboard.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you begin, ensure you have:
+
+- **Node.js** 20.x or higher installed
+- **npm** or your preferred package manager (yarn, pnpm, bun)
+- Access to the backend API URL (provided by your system administrator)
+- A valid user account and credentials
+
+<Warning>
+  MicroCBM requires a running backend API. Without it, authentication will fail and data-dependent pages will show errors. Contact your system administrator for API access.
+</Warning>
+
+## Quick Setup
+
+<Steps>
+  <Step title="Clone or download the repository">
+    Get the source code for MicroCBM:
+
+    ```bash
+    git clone <repository-url>
+    cd microcbm
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required packages:
+
+    ```bash
+    npm install
+    ```
+
+    This will install all dependencies listed in `package.json`, including:
+    - Next.js 15 and React 19
+    - Form libraries (React Hook Form, Zod)
+    - UI components (Radix UI, Recharts)
+    - State management (Zustand, TanStack Query)
+  </Step>
+
+  <Step title="Configure environment variables">
+    Create a `.env.local` file in the root directory with the following variables:
+
+    ```bash .env.local
+    NEXT_PUBLIC_API_URL=https://your-api-url.com
+    SESSION_SECRET=your-secret-key-here
+    ```
+
+    <Note>
+      Replace `https://your-api-url.com` with your actual backend API URL. The `SESSION_SECRET` should be a random string used for session encryption.
+    </Note>
+
+    **Environment Variables Explained:**
+
+    - `NEXT_PUBLIC_API_URL`: The base URL for your backend REST API (required)
+    - `SESSION_SECRET`: A secret key for JWT session management (required)
+  </Step>
+
+  <Step title="Start the development server">
+    Launch the application:
+
+    ```bash
+    npm run dev
+    ```
+
+    The application will start on `http://localhost:3000`. You should see output like:
+
+    ```bash
+    ▲ Next.js 15.5.9
+    - Local:        http://localhost:3000
+    - Ready in 2.1s
+    ```
+  </Step>
+
+  <Step title="Access the application">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:3000
+    ```
+
+    You'll be automatically redirected to the login page at `/auth/login`.
+  </Step>
+
+  <Step title="Log in with your credentials">
+    Enter your email and password on the login form:
+
+    1. Enter your registered email address
+    2. Enter your password (minimum 8 characters)
+    3. Click **Login**
+
+    The login process uses server actions defined in `src/app/actions/auth.ts`:
+
+    ```typescript src/app/actions/auth.ts
+    export async function loginService(payload: {
+      email: string;
+      password: string;
+    }): Promise<ApiResponse> {
+      return handleApiRequest(`${commonEndpoint}/login`, payload);
+    }
+    ```
+  </Step>
+
+  <Step title="Verify OTP code">
+    After successful login credentials verification, you'll be prompted to enter a 6-digit OTP code:
+
+    1. Check your email for the OTP code
+    2. Enter the 6-digit code in the OTP verification screen
+    3. The code will auto-submit when all 6 digits are entered
+
+    <Note>
+      The OTP verification is implemented in `src/app/auth/components/OTPVerification.tsx` and uses the `verifyOTPService` server action.
+    </Note>
+
+    Once verified, you'll be redirected to the dashboard at `/`.
+  </Step>
+</Steps>
+
+## Verify Installation
+
+After logging in, you should see:
+
+✅ **Dashboard page** with summary cards showing:
+- Asset analytics (total count, by criticality)
+- Alarm analytics (active alarms, by severity)
+- Recommendations summary
+- Sample trend charts
+
+✅ **Navigation sidebar** with access to:
+- Dashboard
+- Assets
+- Samples
+- Alarms
+- Recommendations
+- RCA (Root Cause Analysis)
+- Organizations & Sites
+- User Management
+
+✅ **User menu** in the top right corner
+
+## Common Issues
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion title="Backend API connection error">
+    **Problem**: "Unable to connect to server" error message
+
+    **Solution**: 
+    - Verify `NEXT_PUBLIC_API_URL` is correct in `.env.local`
+    - Check that the backend API is running and accessible
+    - If using a free tier service (like Render), allow 30-60 seconds for cold start
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+
+  <Accordion title="OTP not received">
+    **Problem**: No OTP email after login
+
+    **Solution**:
+    - Check your spam/junk folder
+    - Verify your email address is registered in the system
+    - Contact your system administrator to check email service configuration
+  </Accordion>
+
+  <Accordion title="403 Permission errors">
+    **Problem**: Pages show "You do not have permission" messages
+
+    **Solution**:
+    - Verify your user account has the appropriate role assigned
+    - Contact your system administrator to grant necessary permissions
+    - Check the browser console for specific permission errors
+  </Accordion>
+
+  <Accordion title="Build warnings">
+    **Problem**: Warnings during `npm run dev` or `npm run build`
+
+    **Solution**:
+    - Warnings about dynamic routes using `cookies` are expected and harmless
+    - Warnings about `useFormContext` in CheckboxCells.tsx are pre-existing and safe to ignore
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## Next Steps
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
+Now that you have MicroCBM running:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Explore Features" icon="compass" href="/features/asset-management">
+    Learn about asset management, samples, alarms, and more
+  </Card>
+  <Card title="Understand Architecture" icon="sitemap" href="/concepts/architecture">
+    Dive into the application structure and design patterns
+  </Card>
+  <Card title="Development Guide" icon="code" href="/development/project-structure">
+    Start developing and customizing MicroCBM
+  </Card>
+  <Card title="Deployment" icon="cloud" href="/deployment/overview">
+    Deploy MicroCBM to production environments
+  </Card>
 </CardGroup>
 
+## Available Scripts
+
+Here are the key commands for working with MicroCBM:
+
+```bash package.json
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server (after build)
+npm run start
+
+# Run linter
+npm run lint
+
+# Update Iconify icons
+npm run update-icons
+```
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  For detailed installation instructions including Docker setup, advanced configuration, and troubleshooting, see the [Installation Guide](/installation).
 </Note>

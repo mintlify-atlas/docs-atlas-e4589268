@@ -1,0 +1,281 @@
+---
+title: useDebouncedState
+description: Debounced state management hook for input fields with delayed callbacks
+---
+
+The `useDebouncedState` hook provides debounced state management for input fields, delaying the execution of a callback until the user has stopped typing. This is ideal for search inputs, filters, and any scenario where you want to reduce API calls or expensive computations.
+
+## Import
+
+```typescript
+import { useDebouncedState } from "@/hooks";
+```
+
+## Signature
+
+```typescript
+function useDebouncedState<T>({
+  initialValue,
+  debounceTime,
+  onChange,
+}: DebouncedStateOptions<T>): {
+  value: T;
+  onChangeHandler: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}
+```
+
+## Parameters
+
+<ParamField path="initialValue" type="T" required>
+  The initial value for the state. Typically a string for text inputs.
+</ParamField>
+
+<ParamField path="debounceTime" type="number" default={500}>
+  The delay in milliseconds before calling the `onChange` callback after the user stops typing.
+</ParamField>
+
+<ParamField path="onChange" type="(value: T) => void" required>
+  Callback function invoked with the debounced value after the delay period.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="value" type="T">
+  The current local state value that updates immediately on input change.
+</ResponseField>
+
+<ResponseField name="onChangeHandler" type="(event: React.ChangeEvent<HTMLInputElement>) => void">
+  Event handler to attach to the input's `onChange` prop. Updates local state immediately and schedules the debounced `onChange` callback.
+</ResponseField>
+
+## Usage Examples
+
+### Basic Search Input
+
+Debounce search input to reduce API calls:
+
+```tsx
+import { useDebouncedState } from "@/hooks";
+
+function SearchBox() {
+  const { value, onChangeHandler } = useDebouncedState<string>({
+    initialValue: "",
+    debounceTime: 500,
+    onChange: (searchTerm) => {
+      // This runs 500ms after user stops typing
+      console.log("Searching for:", searchTerm);
+      fetchSearchResults(searchTerm);
+    },
+  });
+
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={onChangeHandler}
+      placeholder="Search..."
+    />
+  );
+}
+```
+
+### Custom Debounce Time
+
+Use a longer delay for expensive operations:
+
+```tsx
+import { useDebouncedState } from "@/hooks";
+
+function FilterPanel() {
+  const { value, onChangeHandler } = useDebouncedState<string>({
+    initialValue: "",
+    debounceTime: 1000, // Wait 1 second
+    onChange: (filter) => {
+      // Expensive filtering operation
+      applyComplexFilter(filter);
+    },
+  });
+
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={onChangeHandler}
+      placeholder="Filter results..."
+    />
+  );
+}
+```
+
+### Real-World Example (DebouncedSearch Component)
+
+From the MicroCBM codebase:
+
+```tsx
+import { useDebouncedState } from "@/hooks";
+import { Search } from "./Search";
+
+interface Props {
+  value: string;
+  onChange: (value: string) => void;
+  debounceTime?: number;
+}
+
+export function DebouncedSearch({
+  value,
+  onChange,
+  debounceTime,
+  ...props
+}: Props) {
+  const { value: innerValue, onChangeHandler } = useDebouncedState<string>({
+    initialValue: value,
+    onChange,
+    debounceTime,
+  });
+  
+  return <Search value={innerValue} onChange={onChangeHandler} {...props} />;
+}
+```
+
+### With URL State Sync
+
+Combine with `useUrlState` for debounced URL updates:
+
+```tsx
+import { useDebouncedState } from "@/hooks";
+import { useUrlState } from "@/hooks";
+
+function SearchWithUrl() {
+  const [searchParam, setSearchParam] = useUrlState("q", "");
+  
+  const { value, onChangeHandler } = useDebouncedState<string>({
+    initialValue: searchParam,
+    debounceTime: 300,
+    onChange: (newValue) => {
+      // Update URL after user stops typing
+      setSearchParam(newValue);
+    },
+  });
+
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={onChangeHandler}
+      placeholder="Search (synced to URL)..."
+    />
+  );
+}
+```
+
+### API Call Example
+
+Debounce API requests to reduce server load:
+
+```tsx
+import { useDebouncedState } from "@/hooks";
+import { useState } from "react";
+
+function AssetSearch() {
+  const [results, setResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { value, onChangeHandler } = useDebouncedState<string>({
+    initialValue: "",
+    debounceTime: 500,
+    onChange: async (query) => {
+      if (!query) {
+        setResults([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/assets?search=${query}`);
+        const data = await response.json();
+        setResults(data.assets);
+      } catch (error) {
+        console.error("Search failed:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={value}
+        onChange={onChangeHandler}
+        placeholder="Search assets..."
+      />
+      {isLoading && <div>Loading...</div>}
+      <ul>
+        {results.map((asset) => (
+          <li key={asset.id}>{asset.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+## Behavior
+
+### Immediate Local Updates
+
+The `value` state updates immediately on every keystroke, providing instant visual feedback to the user.
+
+### Debounced Callback
+
+The `onChange` callback is only invoked after the user stops typing for the specified `debounceTime`.
+
+### Timeout Management
+
+Each new input change cancels the previous timeout and starts a new one, ensuring the callback only fires once after typing stops.
+
+## Performance Benefits
+
+<CardGroup cols={2}>
+  <Card title="Reduced API Calls" icon="server">
+    Prevent unnecessary network requests by waiting for the user to finish typing
+  </Card>
+  
+  <Card title="Better UX" icon="user">
+    Instant visual feedback with delayed expensive operations
+  </Card>
+  
+  <Card title="Lower Server Load" icon="gauge">
+    Fewer requests mean reduced server processing and costs
+  </Card>
+  
+  <Card title="Cleaner Code" icon="code">
+    Encapsulates debounce logic in a reusable hook
+  </Card>
+</CardGroup>
+
+## Notes
+
+<Note>
+  The `value` returned by this hook updates immediately. Only the `onChange` callback is debounced.
+</Note>
+
+<Warning>
+  If the component unmounts while a debounce timeout is pending, the timeout is not automatically cleared. For cleanup, consider adding a `useEffect` cleanup function if needed.
+</Warning>
+
+## Common Patterns
+
+### Typical Debounce Times
+
+- **Search inputs**: 300-500ms
+- **Filters**: 500-700ms
+- **Expensive computations**: 800-1000ms
+- **Real-time validation**: 200-300ms
+
+## Related
+
+- [useUrlState](/api/hooks/use-url-state) - Sync state with URL parameters
+- [Form Components](/components/form-inputs) - Input components in MicroCBM
+- [Search Component](/components/ui-components) - Pre-built search implementations

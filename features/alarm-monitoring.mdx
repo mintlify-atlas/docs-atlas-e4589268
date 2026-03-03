@@ -1,0 +1,222 @@
+---
+title: Alarm Monitoring
+description: Receive and manage automated alerts when equipment parameters exceed safe operating thresholds
+---
+
+## Overview
+
+The Alarm Monitoring system provides real-time alerts when equipment parameters deviate from normal operating ranges. Alarms help you respond quickly to developing issues before they escalate into failures.
+
+<Info>
+  Alarms are typically generated automatically based on oil sample analysis results, sensor readings, or manual threshold violations.
+</Info>
+
+## Alarm Lifecycle
+
+Each alarm follows a structured workflow:
+
+1. **Detection**: Alarm is triggered when a parameter exceeds threshold
+2. **Notification**: Relevant stakeholders are alerted
+3. **Acknowledgment**: Operator confirms awareness of the alarm
+4. **Investigation**: Root cause is identified
+5. **Action**: Corrective recommendation is created and linked
+6. **Resolution**: Issue is addressed and alarm is closed
+
+## Alarm Components
+
+Every alarm includes:
+
+- **Parameter**: The monitored value that triggered the alarm (e.g., "Iron concentration", "Water contamination", "Viscosity")
+- **Site**: Location where the alarm originated
+- **First Detected**: Date and time when the condition was first observed
+- **Acknowledgment Status**: Whether the alarm has been acknowledged
+- **Linked Recommendations**: Associated corrective actions
+
+## Creating an Alarm
+
+While most alarms are generated automatically, you can create manual alarms:
+
+<Steps>
+  <Step title="Open Alarm Creation">
+    From the **Alarms** page, click **Add New Alarm**.
+  </Step>
+
+  <Step title="Enter Alarm Details">
+    - **Parameter**: Describe what exceeded normal range (e.g., "High copper in gearbox oil")
+    - **Site**: Select the affected location
+    - **First Detected**: Enter when the issue was discovered
+  </Step>
+
+  <Step title="Set Initial Status">
+    New alarms default to unacknowledged status.
+  </Step>
+
+  <Step title="Save Alarm">
+    Click **Create Alarm** to activate it.
+  </Step>
+</Steps>
+
+## Viewing Alarm Details
+
+Click on any alarm to see its full profile:
+
+### Alarm Status Section
+- **Acknowledgment Status**: Active (acknowledged) or Pending (unacknowledged)
+- **Parameter**: What triggered the alarm
+- **Site**: Location information
+
+### Alarm Information
+- **Parameter**: Detailed description
+- **Site Name**: Full site details
+- **First Detected**: Timestamp when alarm was created
+
+### Status Information
+- Current acknowledgment state
+- Visual status badge
+
+### Linked Recommendations
+- List of associated corrective actions
+- Click on recommendations to view details
+- If none exist, see "No linked recommendations"
+
+### Timestamps
+- **Created**: When alarm was first generated
+- **Last Updated**: Most recent modification
+
+## Acknowledging Alarms
+
+<Note>
+  Acknowledging an alarm confirms that someone is aware of the issue and is taking or planning action.
+</Note>
+
+To acknowledge an alarm:
+
+1. Open the alarm details
+2. Click **Acknowledge** (if available in your view)
+3. Or use the **Edit** function to change status to acknowledged
+
+Acknowledged alarms change status from **Pending** to **Active**.
+
+## Linking Alarms to Recommendations
+
+Connect alarms to corrective actions for full traceability:
+
+<Steps>
+  <Step title="Create Recommendation">
+    From the alarm details, create a new [Recommendation](/features/recommendations) describing the required action.
+  </Step>
+
+  <Step title="Link to Alarm">
+    When creating the recommendation, reference the alarm ID or link it through the recommendation form.
+  </Step>
+
+  <Step title="Track Progress">
+    Monitor recommendation status to ensure the alarm is addressed.
+  </Step>
+
+  <Step title="Close Alarm">
+    Once the recommendation is completed and verified, the alarm can be closed.
+  </Step>
+</Steps>
+
+<Tip>
+  Always link alarms to recommendations to maintain a clear audit trail of actions taken.
+</Tip>
+
+## Filtering and Searching Alarms
+
+Use the filter panel to find specific alarms:
+
+- **Search**: Text search in alarm descriptions
+- **Parameter**: Filter by specific monitored parameters
+- **Acknowledged Status**: Show acknowledged, unacknowledged, or all
+- **Site**: Filter by location
+
+## Alarm Analytics Dashboard
+
+The alarm summary provides key metrics:
+
+### Total Alarms
+Count of all alarms in the system with trend indicator showing growth or reduction compared to previous period.
+
+### Alarm Trend
+- **Growth**: Number of new alarms
+- **Percentage**: Rate of change
+
+Helps identify whether conditions are improving or deteriorating.
+
+### Forecast Alarms
+Predicted alarm count for next period based on trend analysis.
+
+### Open Overdue Alarms
+Alarms that remain unaddressed past their expected resolution time:
+- **Count**: Number of overdue alarms
+- **Trend**: Whether overdue count is increasing or decreasing
+
+<Warning>
+  A rising count of open overdue alarms indicates response capacity issues or inadequate resources.
+</Warning>
+
+## Alarm Severity
+
+While alarms themselves don't have explicit severity levels in the current interface, they inherit urgency from:
+
+1. **Parameter Type**: Critical parameters (e.g., bearing temperature) vs. routine (e.g., filter life)
+2. **Trend Rate**: Rapidly increasing values are more urgent
+3. **Linked Recommendations**: Severity of associated corrective actions
+4. **Asset Criticality**: Alarms on high-criticality assets take priority
+
+## Best Practices
+
+1. **Acknowledge Promptly**: Don't let alarms pile up unacknowledged
+2. **Link to Recommendations**: Always create corrective actions for alarms
+3. **Investigate Root Causes**: Don't just silence alarms — understand why they occurred
+4. **Set Appropriate Thresholds**: Too sensitive creates alarm fatigue; too relaxed misses issues
+5. **Review Trends**: Regular alarm rate increases may indicate systemic problems
+6. **Close Resolved Alarms**: Keep the active alarm list current and actionable
+7. **Document Actions**: Record what was done in linked recommendations
+
+## Alarm Fatigue Prevention
+
+<Tip>
+  If you find yourself ignoring alarms, thresholds may need adjustment.
+</Tip>
+
+To prevent alarm fatigue:
+- **Tune Thresholds**: Adjust limits based on actual equipment condition and OEM specs
+- **Prioritize**: Focus on alarms affecting critical assets first
+- **Automate Where Possible**: Use rules to auto-acknowledge low-priority alarms
+- **Regular Reviews**: Periodically assess alarm effectiveness and adjust
+- **Train Operators**: Ensure everyone understands alarm significance and proper response
+
+## Editing Alarms
+
+1. Click the **Edit** icon next to an alarm
+2. Update fields as needed:
+   - Parameter description
+   - Site (if incorrectly assigned)
+   - Acknowledgment status
+3. Save changes
+
+<Note>
+  "First Detected" timestamp should not be changed as it represents historical fact.
+</Note>
+
+## Deleting Alarms
+
+<Warning>
+  Deleting alarms removes them permanently. Consider closing or archiving instead.
+</Warning>
+
+To delete an alarm:
+1. Click the **Delete** icon
+2. Confirm deletion in the dialog
+
+Only delete alarms that were created in error. For resolved alarms, link them to completed recommendations and close them.
+
+## Related Features
+
+- **[Oil Sample Analysis](/features/oil-sample-analysis)**: Primary source of alarm data
+- **[Recommendations](/features/recommendations)**: Track corrective actions for alarms
+- **[Asset Management](/features/asset-management)**: View all alarms associated with an asset
+- **[Root Cause Analysis](/features/root-cause-analysis)**: Investigate recurring alarm patterns

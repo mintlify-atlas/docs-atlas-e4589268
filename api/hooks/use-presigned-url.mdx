@@ -1,0 +1,380 @@
+---
+title: usePresignedUrl
+description: Fetch presigned URLs for secure S3 file access with automatic loading and error states
+---
+
+The `usePresignedUrl` hook fetches presigned URLs from S3 for secure file access. It manages loading states, error handling, and provides a refetch function for manual retries. Commonly used for displaying uploaded attachments, images, and documents.
+
+## Import
+
+```typescript
+import { usePresignedUrl } from "@/hooks";
+```
+
+## Signature
+
+```typescript
+function usePresignedUrl(
+  fileKey?: string | null,
+  shouldFetch?: boolean
+): PresignedUrlState
+
+interface PresignedUrlState {
+  url: string | null;
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+}
+```
+
+## Parameters
+
+<ParamField path="fileKey" type="string | null" optional>
+  The S3 file key or path to fetch a presigned URL for. If `null` or `undefined`, no request is made.
+</ParamField>
+
+<ParamField path="shouldFetch" type="boolean" default={true}>
+  Controls whether the URL should be fetched. Set to `false` to prevent the request even if `fileKey` is provided. Useful for conditional fetching based on modal visibility or user actions.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="url" type="string | null">
+  The presigned URL for the file. `null` if not yet loaded, if `fileKey` is empty, or if an error occurred.
+</ResponseField>
+
+<ResponseField name="isLoading" type="boolean">
+  `true` while fetching the presigned URL. `false` once the request completes (success or error).
+</ResponseField>
+
+<ResponseField name="error" type="string | null">
+  Error message if the fetch failed. `null` if no error occurred or while loading.
+</ResponseField>
+
+<ResponseField name="refetch" type="() => Promise<void>">
+  Function to manually trigger a re-fetch of the presigned URL. Useful for retry logic after errors.
+</ResponseField>
+
+## Usage Examples
+
+### Basic File Display
+
+Fetch and display an attachment:
+
+```tsx
+import { usePresignedUrl } from "@/hooks";
+
+function FileViewer({ fileKey }: { fileKey: string }) {
+  const { url, isLoading, error } = usePresignedUrl(fileKey);
+
+  if (isLoading) {
+    return <div>Loading file...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  if (!url) {
+    return <div>No file available</div>;
+  }
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      Download File
+    </a>
+  );
+}
+```
+
+### Conditional Fetching (Modal)
+
+From the MicroCBM codebase - only fetch when modal is open:
+
+```tsx
+import { usePresignedUrl } from "@/hooks";
+
+function ViewAssetModal({ asset, isOpen, onClose }) {
+  const datasheetFileKey = asset?.datasheet?.file_url;
+  
+  const {
+    url: datasheetUrl,
+    isLoading: isDatasheetLoading,
+    error: datasheetError,
+  } = usePresignedUrl(datasheetFileKey, isOpen && !!datasheetFileKey);
+
+  if (!asset) return null;
+
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>View Asset</SheetTitle>
+        </SheetHeader>
+
+        {isDatasheetLoading && <p>Loading datasheet...</p>}
+        {datasheetError && <p className="text-red-500">{datasheetError}</p>}
+        {datasheetUrl && (
+          <a href={datasheetUrl} target="_blank" rel="noopener noreferrer">
+            View Datasheet
+          </a>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+```
+
+### Image Display
+
+Display an image from S3:
+
+```tsx
+import { usePresignedUrl } from "@/hooks";
+import Image from "next/image";
+
+function OrganizationLogo({ logoKey }: { logoKey: string | null }) {
+  const { url: logoUrl, isLoading: isLoadingLogo } = usePresignedUrl(logoKey);
+
+  if (isLoadingLogo) {
+    return <div className="skeleton-loader" />;
+  }
+
+  if (!logoUrl) {
+    return <div className="placeholder-logo">No Logo</div>;
+  }
+
+  return (
+    <Image
+      src={logoUrl}
+      alt="Organization logo"
+      width={200}
+      height={200}
+    />
+  );
+}
+```
+
+### With Retry Logic
+
+Implement manual retry on error:
+
+```tsx
+import { usePresignedUrl } from "@/hooks";
+
+function DocumentViewer({ docKey }: { docKey: string }) {
+  const { url, isLoading, error, refetch } = usePresignedUrl(docKey);
+
+  if (isLoading) {
+    return <div>Loading document...</div>;
+  }
+
+  if (error) {
+    return (
+      <div>
+        <p className="text-red-500">Failed to load document</p>
+        <button onClick={refetch}>Retry</button>
+      </div>
+    );
+  }
+
+  if (!url) return null;
+
+  return (
+    <iframe
+      src={url}
+      title="Document Viewer"
+      width="100%"
+      height="600px"
+    />
+  );
+}
+```
+
+### Edit Form with Existing File
+
+From the MicroCBM edit sampling point form:
+
+```tsx
+import { usePresignedUrl } from "@/hooks";
+import { useState } from "react";
+
+function EditSamplingPointForm({ samplingPoint }) {
+  const [existingAttachment, setExistingAttachment] = useState(
+    samplingPoint.attachment_file_url
+  );
+  const [isFileDeleted, setIsFileDeleted] = useState(false);
+
+  const { url: attachmentUrl, isLoading: isAttachmentLoading } =
+    usePresignedUrl(existingAttachment, !!existingAttachment && !isFileDeleted);
+
+  const handleDeleteFile = () => {
+    setIsFileDeleted(true);
+    setExistingAttachment(null);
+  };
+
+  return (
+    <form>
+      {/* Form fields */}
+      
+      {isAttachmentLoading && <p>Loading attachment...</p>}
+      
+      {attachmentUrl && !isFileDeleted && (
+        <div>
+          <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
+            View Current Attachment
+          </a>
+          <button type="button" onClick={handleDeleteFile}>
+            Delete
+          </button>
+        </div>
+      )}
+
+      <input type="file" name="newAttachment" />
+    </form>
+  );
+}
+```
+
+### Site Map Display
+
+Display a site map image:
+
+```tsx
+import { usePresignedUrl } from "@/hooks";
+
+function ViewSiteModal({ site, isOpen }) {
+  const { url: siteMapUrl, isLoading: isSiteMapLoading } = usePresignedUrl(
+    site?.map_file_url,
+    isOpen && !!site?.map_file_url
+  );
+
+  return (
+    <Modal open={isOpen}>
+      <h2>{site.name}</h2>
+      
+      {isSiteMapLoading ? (
+        <div>Loading site map...</div>
+      ) : siteMapUrl ? (
+        <img src={siteMapUrl} alt="Site map" className="site-map" />
+      ) : (
+        <p>No site map available</p>
+      )}
+    </Modal>
+  );
+}
+```
+
+### Multiple Files
+
+Fetch multiple presigned URLs:
+
+```tsx
+import { usePresignedUrl } from "@/hooks";
+
+function MultiFileViewer({ fileKeys }: { fileKeys: string[] }) {
+  const files = fileKeys.map((key) => ({
+    key,
+    ...usePresignedUrl(key),
+  }));
+
+  return (
+    <ul>
+      {files.map((file) => (
+        <li key={file.key}>
+          {file.isLoading ? (
+            <span>Loading...</span>
+          ) : file.error ? (
+            <span className="text-red-500">{file.error}</span>
+          ) : file.url ? (
+            <a href={file.url} target="_blank" rel="noopener noreferrer">
+              {file.key}
+            </a>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Behavior
+
+### Automatic Fetching
+
+The hook fetches the presigned URL automatically when:
+1. The component mounts
+2. `fileKey` changes
+3. `shouldFetch` changes from `false` to `true`
+
+### No Fetch Conditions
+
+No request is made if:
+- `fileKey` is `null` or `undefined`
+- `shouldFetch` is `false`
+
+### API Endpoint
+
+The hook makes a GET request to:
+```
+/api/files/presigned?fileKey={encodeURIComponent(fileKey)}
+```
+
+Expected response format:
+```json
+{
+  "data": {
+    "presigned_url": "https://s3.amazonaws.com/bucket/file.pdf?signature=..."
+  }
+}
+```
+
+## Notes
+
+<Note>
+  Presigned URLs typically expire after a certain duration (e.g., 1 hour). Use the `refetch` function to generate a new URL if the old one expires.
+</Note>
+
+<Warning>
+  The hook does not automatically retry on error. Implement retry logic using the `refetch` function as needed.
+</Warning>
+
+<Note>
+  Setting `shouldFetch: false` is useful for preventing unnecessary requests when files are conditionally displayed (e.g., in modals that may be closed).
+</Note>
+
+## Performance Tips
+
+<CardGroup cols={2}>
+  <Card title="Conditional Fetching" icon="filter">
+    Use `shouldFetch` to prevent requests for hidden or collapsed content
+  </Card>
+  
+  <Card title="Lazy Loading" icon="hourglass">
+    Only fetch URLs when users navigate to a view containing the file
+  </Card>
+  
+  <Card title="Avoid Loops" icon="circle-xmark">
+    Don't call this hook in array map functions - batch requests instead
+  </Card>
+  
+  <Card title="Cache Awareness" icon="database">
+    Presigned URLs are temporary - expect them to expire
+  </Card>
+</CardGroup>
+
+## Common Use Cases
+
+- Asset datasheets (PDF, Word docs)
+- Site maps and floor plans (images)
+- Organization logos
+- Sampling point attachments
+- Recommendation evidence files
+- User profile pictures
+- Report exports
+
+## Related
+
+- [File Upload Actions](/api/actions/overview) - Server actions for file uploads
+- [Asset Types](/api/types/inventory) - Asset with datasheet file reference
+- [Components](/components/overview) - File display components

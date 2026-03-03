@@ -1,0 +1,671 @@
+---
+title: Organization & Hierarchy Actions
+description: Server Actions for managing organizations, sites, and departments
+---
+
+## Overview
+
+Organization hierarchy actions manage the organizational structure including organizations, sites (covered in Asset Actions), and departments. Functions are located in `src/app/actions/organizations.ts` and `src/app/actions/departments.ts`.
+
+## Organization Operations
+
+### getOrganizationsService
+
+Retrieves a paginated list of organizations with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="search" type="string" optional>
+    Search term
+  </ParamField>
+  
+  <ParamField path="industry" type="string" optional>
+    Filter by industry
+  </ParamField>
+  
+  <ParamField path="team_size" type="string" optional>
+    Filter by team size
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="Organization[]">
+  Array of organization objects
+</ResponseField>
+
+<ResponseField name="meta" type="OrganizationsMeta">
+  Pagination metadata
+  
+  <ResponseField name="page" type="number">
+    Current page number
+  </ResponseField>
+  
+  <ResponseField name="limit" type="number">
+    Items per page
+  </ResponseField>
+  
+  <ResponseField name="total" type="number">
+    Total number of organizations
+  </ResponseField>
+  
+  <ResponseField name="total_pages" type="number">
+    Total number of pages
+  </ResponseField>
+  
+  <ResponseField name="has_next" type="boolean">
+    Whether there is a next page
+  </ResponseField>
+  
+  <ResponseField name="has_prev" type="boolean">
+    Whether there is a previous page
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+"use server";
+import { getOrganizationsService } from "@/app/actions";
+
+export default async function OrganizationsPage({ searchParams }) {
+  const params = await searchParams;
+  const page = parseInt(String(params?.page ?? 1), 10);
+  const limit = parseInt(String(params?.limit ?? 10), 10);
+
+  const { data: organizations, meta } = await getOrganizationsService({ 
+    page, 
+    limit 
+  });
+
+  return <OrganizationTable data={organizations} meta={meta} />;
+}
+```
+
+```typescript Filter by Industry
+import { getOrganizationsService } from "@/app/actions";
+
+const { data: manufacturingOrgs } = await getOrganizationsService({
+  industry: "Manufacturing",
+});
+```
+
+```typescript Filter by Team Size
+import { getOrganizationsService } from "@/app/actions";
+
+const { data: largeOrgs } = await getOrganizationsService({
+  team_size: "100-500",
+});
+```
+
+</CodeGroup>
+
+<Note>
+On permission errors (403), this function returns an empty data array with zero total instead of throwing.
+</Note>
+
+---
+
+### getOrganizationService
+
+Retrieves a single organization by ID.
+
+<ParamField path="id" type="string" required>
+  Unique organization identifier
+</ParamField>
+
+<ResponseField name="data" type="Organization">
+  Complete organization object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getOrganizationService } from "@/app/actions";
+
+const organization = await getOrganizationService("org-123");
+
+console.log(organization.name);
+console.log(organization.industry);
+console.log(organization.team_strength);
+```
+
+```typescript With Error Handling
+import { getOrganizationService } from "@/app/actions";
+
+try {
+  const org = await getOrganizationService(orgId);
+  return <OrganizationDetails organization={org} />;
+} catch (error) {
+  console.error("Error fetching organization:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### addOrganizationService
+
+Creates a new organization.
+
+<ParamField path="payload" type="AddOrganizationPayload" required>
+  Organization creation data
+  
+  <ParamField path="name" type="string" required>
+    Organization name
+  </ParamField>
+  
+  <ParamField path="industry" type="string" required>
+    Industry sector (e.g., "Manufacturing", "Energy", "Transportation")
+  </ParamField>
+  
+  <ParamField path="team_strength" type="string" required>
+    Team size range (e.g., "1-10", "10-50", "50-100", "100-500", "500+")
+  </ParamField>
+  
+  <ParamField path="description" type="string" required>
+    Organization description
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created organization data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addOrganizationService } from "@/app/actions";
+import { AddOrganizationPayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddOrganizationForm() {
+  const handleSubmit = async (data: AddOrganizationPayload) => {
+    const payload: AddOrganizationPayload = {
+      name: data.name,
+      industry: data.industry,
+      team_strength: data.team_strength,
+      description: data.description,
+    };
+
+    const response = await addOrganizationService(payload);
+    
+    if (response.success) {
+      toast.success("Organization created successfully");
+      router.push("/organizations");
+    } else {
+      toast.error(response.message || "Failed to create organization");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript Full Example
+import { addOrganizationService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleCreate = async () => {
+  const response = await addOrganizationService({
+    name: "Acme Manufacturing",
+    industry: "Manufacturing",
+    team_strength: "100-500",
+    description: "Leading manufacturer of industrial equipment",
+  });
+  
+  if (response.success) {
+    toast.success("Organization created");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### editOrganizationService
+
+Updates an existing organization.
+
+<ParamField path="id" type="string" required>
+  Organization ID to update
+</ParamField>
+
+<ParamField path="payload" type="EditOrganizationPayload" required>
+  Updated organization data (same structure as AddOrganizationPayload)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editOrganizationService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleUpdate = async (orgId: string, data: EditOrganizationPayload) => {
+  const response = await editOrganizationService(orgId, data);
+  
+  if (response.success) {
+    toast.success("Organization updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteOrganizationService
+
+Deletes an organization.
+
+<ParamField path="id" type="string" required>
+  Organization ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteOrganizationService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (orgId: string) => {
+  const response = await deleteOrganizationService(orgId);
+  
+  if (response.success) {
+    toast.success("Organization deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+## Department Operations
+
+### getDepartmentsService
+
+Retrieves a paginated list of departments with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="search" type="string" optional>
+    Search term
+  </ParamField>
+  
+  <ParamField path="organization_id" type="string" optional>
+    Filter by organization ID
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="Department[]">
+  Array of department objects
+</ResponseField>
+
+<ResponseField name="meta" type="DepartmentsMeta">
+  Pagination metadata (same structure as organizations)
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getDepartmentsService } from "@/app/actions";
+
+const { data: departments, meta } = await getDepartmentsService({
+  page: 1,
+  limit: 10,
+});
+```
+
+```typescript Filter by Organization
+import { getDepartmentsService } from "@/app/actions";
+
+const { data: departments } = await getDepartmentsService({
+  organization_id: "org-123",
+});
+```
+
+</CodeGroup>
+
+<Note>
+On permission errors (403) or API errors, returns an empty data array with default pagination metadata.
+</Note>
+
+---
+
+### getDepartmentService
+
+Retrieves a single department by ID.
+
+<ParamField path="id" type="string" required>
+  Department ID
+</ParamField>
+
+<ResponseField name="data" type="Department">
+  Complete department object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getDepartmentService } from "@/app/actions";
+
+const department = await getDepartmentService("dept-123");
+console.log(department.name);
+```
+
+</CodeGroup>
+
+---
+
+### addDepartmentService
+
+Creates a new department.
+
+<ParamField path="payload" type="AddDepartmentPayload" required>
+  Department creation data
+  
+  <ParamField path="name" type="string" required>
+    Department name
+  </ParamField>
+  
+  <ParamField path="description" type="string" required>
+    Department description
+  </ParamField>
+  
+  <ParamField path="organization_id" type="string" required>
+    Parent organization ID
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addDepartmentService } from "@/app/actions";
+import { AddDepartmentPayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddDepartmentForm() {
+  const handleSubmit = async (data: AddDepartmentPayload) => {
+    const payload: AddDepartmentPayload = {
+      name: data.name,
+      description: data.description,
+      organization_id: data.organization_id,
+    };
+
+    const response = await addDepartmentService(payload);
+    
+    if (response.success) {
+      toast.success("Department created successfully");
+      router.push("/departments");
+    } else {
+      toast.error(response.message || "Failed to create department");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript Full Example
+import { addDepartmentService } from "@/app/actions";
+
+const response = await addDepartmentService({
+  name: "Maintenance",
+  description: "Maintenance and repair department",
+  organization_id: "org-123",
+});
+
+if (response.success) {
+  console.log("Department created");
+}
+```
+
+</CodeGroup>
+
+<Note>
+The payload is automatically transformed to match the API format with nested organization object.
+</Note>
+
+---
+
+### editDepartmentService
+
+Updates an existing department.
+
+<ParamField path="id" type="string" required>
+  Department ID to update
+</ParamField>
+
+<ParamField path="payload" type="EditDepartmentPayload" required>
+  Updated department data (same structure as AddDepartmentPayload)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editDepartmentService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleUpdate = async (deptId: string, data: EditDepartmentPayload) => {
+  const response = await editDepartmentService(deptId, data);
+  
+  if (response.success) {
+    toast.success("Department updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteDepartmentService
+
+Deletes a department.
+
+<ParamField path="id" type="string" required>
+  Department ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteDepartmentService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (deptId: string) => {
+  const response = await deleteDepartmentService(deptId);
+  
+  if (response.success) {
+    toast.success("Department deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+## Common Workflows
+
+### Create Organizational Hierarchy
+
+<CodeGroup>
+
+```typescript Complete Hierarchy Setup
+import { 
+  addOrganizationService, 
+  addDepartmentService,
+  addSiteService 
+} from "@/app/actions";
+import { toast } from "sonner";
+
+// 1. Create organization
+const orgResponse = await addOrganizationService({
+  name: "Acme Manufacturing",
+  industry: "Manufacturing",
+  team_strength: "100-500",
+  description: "Industrial equipment manufacturer",
+});
+
+if (!orgResponse.success) {
+  toast.error("Failed to create organization");
+  return;
+}
+
+const orgId = orgResponse.data?.data?.id;
+
+// 2. Create departments
+const departments = [
+  {
+    name: "Maintenance",
+    description: "Equipment maintenance and repair",
+    organization_id: orgId,
+  },
+  {
+    name: "Operations",
+    description: "Production operations",
+    organization_id: orgId,
+  },
+];
+
+for (const dept of departments) {
+  await addDepartmentService(dept);
+}
+
+// 3. Create sites
+const siteResponse = await addSiteService({
+  name: "Main Production Facility",
+  organization_id: orgId,
+  // ... other site fields
+});
+
+if (siteResponse.success) {
+  toast.success("Organization hierarchy created successfully");
+}
+```
+
+</CodeGroup>
+
+### List All Resources in Organization
+
+<CodeGroup>
+
+```typescript Organization Resources
+import { 
+  getDepartmentsService,
+  getSitesService,
+  getAssetsService 
+} from "@/app/actions";
+
+export default async function OrganizationOverview({ orgId }) {
+  const [departments, sites, assets] = await Promise.all([
+    getDepartmentsService({ organization_id: orgId }),
+    getSitesService({ organization_id: orgId }),
+    getAssetsService({ organization_id: orgId }),
+  ]);
+
+  return (
+    <div>
+      <h2>Organization Resources</h2>
+      <p>{departments.data.length} departments</p>
+      <p>{sites.data.length} sites</p>
+      <p>{assets.data.length} assets</p>
+      
+      <DepartmentList departments={departments.data} />
+      <SiteList sites={sites.data} />
+      <AssetList assets={assets.data} />
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+## Type Definitions
+
+Import types from `@/types` and schemas from `@/schema`:
+
+```typescript
+import { Organization, Department } from "@/types";
+import { 
+  AddOrganizationPayload, 
+  EditOrganizationPayload,
+  AddDepartmentPayload,
+  EditDepartmentPayload,
+  ADD_ORGANIZATION_SCHEMA,
+  ADD_DEPARTMENT_SCHEMA 
+} from "@/schema";
+import { ApiResponse } from "@/app/actions";
+import { 
+  OrganizationsMeta,
+  DepartmentsMeta 
+} from "@/app/actions";
+```
+
+## Related Actions
+
+- [Asset Actions](/api/actions/assets) - Site management (part of asset actions)
+- [Type Definitions](/api/types/organizations) - Organization type definitions

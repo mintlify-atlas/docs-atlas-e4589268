@@ -1,0 +1,441 @@
+---
+title: Security
+description: Security headers, middleware configuration, and best practices for MicroCBM
+---
+
+MicroCBM implements comprehensive security measures including HTTP security headers, route protection middleware, and authentication token management.
+
+## Security Headers
+
+Security headers are configured in `next.config.ts` and applied to all routes:
+
+```typescript next.config.ts
+const securityHeaders = [
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+];
+
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/(.*)", headers: securityHeaders }];
+  },
+};
+```
+
+### Header Explanations
+
+<ParamField path="X-DNS-Prefetch-Control" type="string" default="on">
+  Controls DNS prefetching, allowing browsers to proactively resolve domain names for improved performance.
+</ParamField>
+
+<ParamField path="X-Content-Type-Options" type="string" default="nosniff">
+  Prevents browsers from MIME-sniffing responses away from the declared content type, mitigating content-type confusion attacks.
+</ParamField>
+
+<ParamField path="X-Frame-Options" type="string" default="SAMEORIGIN">
+  Prevents the application from being embedded in frames from other origins, protecting against clickjacking attacks. Only allows framing from the same origin.
+</ParamField>
+
+<ParamField path="Referrer-Policy" type="string" default="strict-origin-when-cross-origin">
+  Controls how much referrer information is sent with requests. Sends full URL for same-origin requests, only origin for cross-origin HTTPS requests, and nothing for downgraded (HTTPS→HTTP) requests.
+</ParamField>
+
+<ParamField path="Permissions-Policy" type="string" default="camera=(), microphone=(), geolocation=()">
+  Disables browser features that the application doesn't use, reducing attack surface by preventing access to camera, microphone, and geolocation APIs.
+</ParamField>
+
+<ParamField path="poweredByHeader" type="boolean" default="false">
+  Disables the `X-Powered-By: Next.js` header to avoid advertising the framework being used.
+</ParamField>
+
+## Middleware Protection
+
+The application uses Next.js middleware to protect routes and enforce authentication:
+
+```typescript src/middleware.ts
+import { NextRequest, NextResponse } from "next/server";
+import { ROUTES } from "./utils";
+import { isTokenExpired } from "./libs/jwt";
+
+const publicPaths = new Set([
+  ROUTES.AUTH.LOGIN,
+  ROUTES.AUTH.REGISTER,
+  ROUTES.AUTH.RESET_PASSWORD,
+]);
+
+function isPublicPath(pathname: string): boolean {
+  return publicPaths.has(pathname) || pathname.startsWith("/auth/");
+}
+
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get("token")?.value;
+  const isPublic = isPublicPath(pathname);
+
+  if (token && isTokenExpired(token)) {
+    const response = isPublic
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+    response.cookies.delete("token");
+    response.cookies.delete("userData");
+    return response;
+  }
+
+  if (!isPublic && !token) {
+    return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+  }
+
+  if (isPublic && token) {
+    return NextResponse.redirect(new URL(ROUTES.HOME, req.nextUrl));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/((?!api|_next/static|_next/image|assets|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest).*)",
+  ],
+};
+```
+
+### Middleware Behavior
+
+The middleware implements the following security logic:
+
+<Steps>
+  <Step title="Token Validation">
+    Checks if the JWT token exists and validates its expiration.
+  </Step>
+  
+  <Step title="Expired Token Handling">
+    If the token is expired, deletes both `token` and `userData` cookies and redirects unauthenticated users to login.
+  </Step>
+  
+  <Step title="Route Protection">
+    Redirects unauthenticated users trying to access protected routes to the login page.
+  </Step>
+  
+  <Step title="Authenticated Redirect">
+    Redirects authenticated users away from public auth pages (login, register) to the home page.
+  </Step>
+</Steps>
+
+### Public Routes
+
+The following routes are publicly accessible without authentication:
+
+- `/auth/login` - Login page
+- `/auth/sign-up` - Registration page
+- `/auth/reset` - Password reset page
+- Any route matching `/auth/*`
+
+### Excluded Paths
+
+The middleware matcher excludes:
+
+- `/api/*` - API routes
+- `/_next/static/*` - Static assets
+- `/_next/image/*` - Image optimization
+- `/assets/*` - Public assets
+- `favicon.ico`
+- `robots.txt`
+- `sitemap.xml`
+- `manifest.webmanifest`
+
+## JWT Token Management
+
+Tokens are managed using the `jose` library:
+
+```typescript src/libs/jwt.ts
+import { decodeJwt } from "jose";
+
+export interface JWTPayload {
+  user_id: string;
+  email: string;
+  role: string;
+  role_id: string;
+  permissions: string[];
+  org_id: string;
+  exp: number;
+  iat: number;
+}
+
+export function decodeJWT(token: string): JWTPayload | null {
+  try {
+    const decoded = decodeJwt(token);
+    return decoded as unknown as JWTPayload;
+  } catch (error) {
+    console.error("Error decoding JWT:", error);
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeJWT(token);
+  if (!payload) return true;
+
+  const currentTime = Math.floor(Date.now() / 1000);
+  return payload.exp < currentTime;
+}
+
+export function getTokenExpirationTime(token: string): Date | null {
+  const payload = decodeJWT(token);
+  if (!payload) return null;
+
+  return new Date(payload.exp * 1000);
+}
+```
+
+### Token Payload Structure
+
+JWT tokens contain the following claims:
+
+<ParamField path="user_id" type="string">
+  Unique identifier for the authenticated user.
+</ParamField>
+
+<ParamField path="email" type="string">
+  User's email address.
+</ParamField>
+
+<ParamField path="role" type="string">
+  User's role name (e.g., "admin", "operator").
+</ParamField>
+
+<ParamField path="role_id" type="string">
+  Unique identifier for the user's role.
+</ParamField>
+
+<ParamField path="permissions" type="string[]">
+  Array of permission strings the user has access to.
+</ParamField>
+
+<ParamField path="org_id" type="string">
+  Organization identifier the user belongs to.
+</ParamField>
+
+<ParamField path="exp" type="number">
+  Token expiration timestamp (Unix epoch time).
+</ParamField>
+
+<ParamField path="iat" type="number">
+  Token issued-at timestamp (Unix epoch time).
+</ParamField>
+
+## Authentication Flow
+
+MicroCBM implements a secure OTP-based authentication flow:
+
+<Steps>
+  <Step title="Login Request">
+    User submits email and password to the backend API.
+  </Step>
+  
+  <Step title="OTP Verification">
+    Backend sends a 6-digit OTP code to the user's email. User must enter the OTP to complete login.
+  </Step>
+  
+  <Step title="Token Issuance">
+    Upon successful OTP verification, backend issues a JWT token.
+  </Step>
+  
+  <Step title="Cookie Storage">
+    The token is stored in an HTTP-only cookie named `token`, and user data is stored in a `userData` cookie.
+  </Step>
+  
+  <Step title="Automatic Validation">
+    Middleware validates the token on every request and handles expired tokens automatically.
+  </Step>
+</Steps>
+
+<Warning>
+  Full end-to-end login requires access to the user's email inbox to retrieve the OTP code. Plan for this during testing.
+</Warning>
+
+## Image Security
+
+Remote images are restricted to allowed domains:
+
+```typescript next.config.ts
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.r2.cloudflarestorage.com",
+      },
+    ],
+  },
+};
+```
+
+This configuration:
+
+- Only allows HTTPS images
+- Restricts images to Cloudflare R2 storage domains
+- Prevents loading images from untrusted sources
+
+## SEO Security
+
+The application controls search engine indexing through `robots.ts`:
+
+```typescript src/app/robots.ts
+import type { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      {
+        userAgent: "*",
+        allow: ["/auth/login", "/auth/sign-up", "/auth/reset"],
+        disallow: ["/api/", "/_next/"],
+      },
+    ],
+  };
+}
+```
+
+This configuration:
+
+- Allows indexing of public authentication pages
+- Disallows indexing of API routes and Next.js internals
+- Prevents sensitive routes from appearing in search results
+
+## Content Security Policy (Optional)
+
+For enhanced security, consider adding a Content Security Policy header:
+
+```typescript next.config.ts
+const securityHeaders = [
+  // ... existing headers
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://api.example.com",
+      "frame-ancestors 'none'",
+    ].join("; "),
+  },
+];
+```
+
+<Warning>
+  CSP can break functionality if configured incorrectly. Test thoroughly in a staging environment before deploying to production.
+</Warning>
+
+## HTTPS Enforcement
+
+Always deploy to production with HTTPS enabled:
+
+- Most platforms (Vercel, Netlify, AWS Amplify) provide automatic HTTPS
+- For custom deployments, use Let's Encrypt or your certificate provider
+- Configure your platform to redirect HTTP to HTTPS automatically
+
+## Security Checklist
+
+Before deploying to production:
+
+<Steps>
+  <Step title="Environment Variables">
+    Verify all environment variables are set securely and not exposed in logs or error messages.
+  </Step>
+  
+  <Step title="Security Headers">
+    Test security headers using [securityheaders.com](https://securityheaders.com).
+  </Step>
+  
+  <Step title="Authentication">
+    Test the complete authentication flow including token expiration and OTP verification.
+  </Step>
+  
+  <Step title="HTTPS">
+    Ensure HTTPS is enabled and HTTP redirects to HTTPS.
+  </Step>
+  
+  <Step title="Dependency Audit">
+    Run `npm audit` to check for known vulnerabilities in dependencies.
+  </Step>
+  
+  <Step title="CORS Configuration">
+    Verify the backend API has proper CORS settings for your production domain.
+  </Step>
+  
+  <Step title="Rate Limiting">
+    Ensure the backend API has rate limiting enabled to prevent abuse.
+  </Step>
+</Steps>
+
+## Monitoring Security Events
+
+Implement logging for security-relevant events:
+
+- Failed authentication attempts
+- Token expiration and refresh events
+- Unauthorized access attempts to protected routes
+- API connection failures
+- Changes to user roles and permissions
+
+## Security Updates
+
+Keep dependencies up to date:
+
+```bash
+# Check for outdated packages
+npm outdated
+
+# Update all packages to latest versions
+npm update
+
+# Check for security vulnerabilities
+npm audit
+
+# Automatically fix vulnerabilities
+npm audit fix
+```
+
+<Note>
+  Subscribe to security advisories for Next.js and your key dependencies to stay informed about critical updates.
+</Note>
+
+## Additional Security Measures
+
+<CardGroup cols={2}>
+  <Card title="Rate Limiting" icon="gauge">
+    Implement rate limiting on the backend API to prevent brute force attacks.
+  </Card>
+  
+  <Card title="Input Validation" icon="check">
+    All user input is validated using Zod schemas before processing.
+  </Card>
+  
+  <Card title="XSS Protection" icon="shield-halved">
+    React automatically escapes output to prevent XSS attacks.
+  </Card>
+  
+  <Card title="CSRF Protection" icon="lock">
+    Use SameSite cookie attributes to mitigate CSRF attacks.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Deployment Overview" icon="rocket" href="/deployment/overview">
+    Learn about deployment platforms and strategies
+  </Card>
+  <Card title="Environment Variables" icon="key" href="/deployment/environment-variables">
+    Configure required environment variables
+  </Card>
+</CardGroup>

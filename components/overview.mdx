@@ -1,0 +1,201 @@
+---
+title: Component Library Overview
+description: Comprehensive guide to the MicroCBM component library built on React, Next.js 15, and Radix UI primitives
+---
+
+## Introduction
+
+MicroCBM provides a comprehensive component library designed for building modern, accessible, and maintainable condition-based maintenance interfaces. The library is built on top of React 18, Next.js 15, and leverages Radix UI primitives for accessibility.
+
+## Architecture
+
+The component library is organized into three main categories:
+
+1. **UI Components** - Core building blocks like buttons, inputs, selects, and modals
+2. **Data Visualization** - Charts and graphs for displaying metrics and trends
+3. **Form Inputs** - Specialized form components for data entry and validation
+
+## Design System
+
+All components follow a consistent design system with:
+
+- **Tailwind CSS** for styling and utility classes
+- **Class Variance Authority (CVA)** for component variants
+- **Radix UI** primitives for accessibility and keyboard navigation
+- **Framer Motion** for animations and transitions
+- **Iconify** for consistent iconography
+
+## Component Location
+
+All components are located in `/src/components/` and follow this structure:
+
+```
+src/components/
+├── button/
+│   ├── Button.tsx
+│   └── index.ts
+├── input/
+│   ├── Input.tsx
+│   ├── Input.module.scss
+│   └── index.ts
+├── select/
+│   ├── Select.tsx
+│   └── index.ts
+└── ...
+```
+
+## Import Patterns
+
+Components can be imported directly from the `@/components` barrel export:
+
+```tsx
+import { Button, Input, Select, Modal } from "@/components";
+```
+
+Or from their individual modules:
+
+```tsx
+import { Button } from "@/components/button";
+import Input from "@/components/input/Input";
+```
+
+## Common Props
+
+Most components share common prop patterns:
+
+<ParamField path="className" type="string">
+  Additional CSS classes to apply to the component
+</ParamField>
+
+<ParamField path="error" type="string | boolean">
+  Error state and message for form components
+</ParamField>
+
+<ParamField path="disabled" type="boolean">
+  Disables user interaction with the component
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text for form inputs
+</ParamField>
+
+## Accessibility
+
+All components are built with accessibility in mind:
+
+- **Keyboard Navigation** - Full keyboard support for all interactive elements
+- **Screen Reader Support** - Proper ARIA attributes and semantic HTML
+- **Focus Management** - Visible focus indicators and logical focus order
+- **Color Contrast** - WCAG AA compliant color combinations
+
+## TypeScript Support
+
+All components are fully typed with TypeScript interfaces and types exported for use in your application:
+
+```tsx
+import type { ButtonProps } from "@/components/button/Button";
+import type { StatusBadgeStatus } from "@/components/status-badge/StatusBadge";
+```
+
+## Styling Approach
+
+Components use a hybrid styling approach:
+
+1. **Tailwind Utility Classes** - For most styling needs
+2. **CSS Modules** - For component-specific styles (e.g., `Input.module.scss`, `Table.module.scss`)
+3. **CVA** - For managing component variants and states
+
+<Note>
+  The `cn()` utility from `@/libs` is used throughout for conditional class merging using `clsx` and `tailwind-merge`.
+</Note>
+
+## Component Categories
+
+### UI Components
+
+Core interface elements for building application UIs:
+
+- Button, Input, Select, Modal
+- Table, Checkbox, Radio
+- StatusBadge, Tag, Label
+- Dialog, Popover, Sheet
+
+[Learn more about UI Components →](/components/ui-components)
+
+### Data Visualization
+
+Chart components for displaying metrics and analytics:
+
+- AreaChart - Time series data with filled areas
+- BarChart - Comparative data visualization
+- PieChart - Proportional data display
+
+[Learn more about Data Visualization →](/components/data-visualization)
+
+### Form Inputs
+
+Specialized inputs for forms and data entry:
+
+- PhoneInput - International phone number input
+- FileUploader - File upload with preview
+- DateInput - Date and date range selection
+- OTPInput - One-time password entry
+
+[Learn more about Form Inputs →](/components/form-inputs)
+
+## Best Practices
+
+### Component Composition
+
+Compose complex UIs from smaller, reusable components:
+
+```tsx
+<Modal isOpen={isOpen} setIsOpen={setIsOpen} title="Add Asset">
+  <form onSubmit={handleSubmit}>
+    <Input label="Asset Name" name="name" error={errors.name} />
+    <Select label="Asset Type">
+      <SelectTrigger>
+        <SelectValue placeholder="Select type" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="pump">Pump</SelectItem>
+        <SelectItem value="motor">Motor</SelectItem>
+      </SelectContent>
+    </Select>
+    <Button type="submit" loading={isSubmitting}>
+      Save Asset
+    </Button>
+  </form>
+</Modal>
+```
+
+### Error Handling
+
+Use the `error` prop consistently across form components:
+
+```tsx
+<Input
+  label="Email"
+  name="email"
+  type="email"
+  error={errors.email?.message}
+/>
+```
+
+### Loading States
+
+Indicate loading states with the `loading` prop on buttons:
+
+```tsx
+<Button loading={isSubmitting} disabled={isSubmitting}>
+  {isSubmitting ? "Saving..." : "Save"}
+</Button>
+```
+
+## Next Steps
+
+Explore the detailed documentation for each component category:
+
+- [UI Components](/components/ui-components) - Buttons, inputs, modals, and more
+- [Data Visualization](/components/data-visualization) - Charts and graphs
+- [Form Inputs](/components/form-inputs) - Specialized form components

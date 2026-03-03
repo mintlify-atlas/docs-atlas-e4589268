@@ -1,0 +1,350 @@
+---
+title: Project Structure
+description: Understanding the directory structure and organization of the MicroCBM codebase
+icon: folder-tree
+---
+
+## Overview
+
+MicroCBM follows Next.js 15 App Router conventions with a feature-based organization. The project is structured to maximize code reusability and maintain clear separation of concerns.
+
+## Root Directory Structure
+
+```
+microcbm/
+├── src/
+│   ├── app/              # Next.js App Router pages and layouts
+│   ├── components/       # Reusable UI components
+│   ├── hooks/            # Custom React hooks
+│   ├── stores/           # Zustand state management
+│   ├── schema/           # Zod validation schemas
+│   ├── types/            # TypeScript type definitions
+│   ├── utils/            # Utility functions and constants
+│   ├── helpers/          # Helper functions
+│   ├── libs/             # Third-party library configurations
+│   ├── data/             # Static data and constants
+│   └── mocks/            # Mock data for development
+├── public/               # Static assets
+├── next.config.ts        # Next.js configuration
+├── tailwind.config.ts    # Tailwind CSS configuration
+├── tsconfig.json         # TypeScript configuration
+└── package.json          # Dependencies and scripts
+```
+
+## App Directory (`src/app/`)
+
+The app directory follows Next.js 15 App Router conventions with route groups and nested layouts.
+
+### Route Groups
+
+#### `(home)` - Protected Routes
+
+All authenticated application pages are grouped under the `(home)` route group:
+
+```
+src/app/(home)/
+├── layout.tsx           # Shared layout with Navbar and Sidebar
+├── page.tsx             # Dashboard home page
+├── assets/              # Asset management
+├── alarms/              # Alarm monitoring
+├── samples/             # Oil sample analysis
+├── recommendations/     # Maintenance recommendations
+├── rca/                 # Root Cause Analysis
+├── organizations/       # Organization management
+├── sites/               # Site management
+├── departments/         # Department management
+├── roles/               # Role & permissions
+├── sampling-points/     # Sampling point management
+├── sampling-routes/     # Sampling route management
+├── sample-history/      # Historical sample data
+└── user-management/     # User administration
+```
+
+<Note>
+The `(home)` route group uses a shared layout that includes authentication checks and the main application UI shell.
+</Note>
+
+#### `auth` - Public Routes
+
+Authentication flows are in the `auth` directory:
+
+```
+src/app/auth/
+├── login/
+├── sign-up/
+├── reset/
+└── components/          # Shared auth components
+```
+
+### Server Actions (`src/app/actions/`)
+
+Server actions handle all backend API communication:
+
+```typescript
+// src/app/actions/inventory.ts:1
+"use server";
+
+import { Asset, Sites, SitesAnalytics, AssetAnalytics } from "@/types";
+import { ApiResponse, handleApiRequest, requestWithAuth } from "./helpers";
+import { AddAssetPayload, AddSitesPayload, EditSitePayload } from "@/schema";
+
+const commonEndpoint = "/api/v1/";
+
+export interface AssetsMeta {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+async function getAssetsService(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  [key: string]: string | number | string[] | undefined;
+}): Promise<GetAssetsResult> {
+  // Server-side data fetching
+}
+```
+
+<Note>
+All server actions are marked with `"use server"` and handle authentication, error handling, and API communication.
+</Note>
+
+## Feature Module Structure
+
+Each feature follows a consistent structure:
+
+```
+feature/
+├── page.tsx             # Main page component (Server Component)
+├── layout.tsx           # Feature-specific layout and metadata
+├── components/          # Feature-specific components
+│   ├── FeatureContent.tsx
+│   ├── FeatureTable.tsx
+│   ├── FeatureFilters.tsx
+│   └── modals/          # Modal components
+├── hooks/               # Feature-specific hooks
+└── add|edit/            # Sub-routes for CRUD operations
+```
+
+### Example: Assets Feature
+
+```typescript
+// src/app/(home)/assets/page.tsx:1
+"use server";
+import React from "react";
+import { AssetContent, AssetTable, AssetSummary } from "./components";
+import {
+  getAssetsService,
+  getAssetsAnalyticsService,
+  getSitesService,
+} from "@/app/actions";
+
+export default async function AssetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(String(params?.page ?? 1), 10) || 1);
+  const limit = Math.max(1, Math.min(100, parseInt(String(params?.limit ?? 10), 10) || 10);
+  const search = typeof params?.search === "string" ? params.search : "";
+
+  const { data: assets, meta } = await getAssetsService({ page, limit, search });
+  const assetsAnalytics = await getAssetsAnalyticsService();
+  const sites = (await getSitesService()).data;
+
+  return (
+    <main className="flex flex-col gap-4">
+      <AssetContent sites={sites} />
+      {assetsAnalytics && <AssetSummary assetsAnalytics={assetsAnalytics} />}
+      <AssetTable data={assets} meta={meta} />
+    </main>
+  );
+}
+```
+
+## Components Directory (`src/components/`)
+
+Reusable UI components organized by functionality:
+
+```
+src/components/
+├── button/              # Button component
+├── input/               # Input component
+├── select/              # Select dropdown
+├── modal/               # Modal dialog
+├── table/               # Data table
+├── area-chart/          # Area chart visualization
+├── bar-chart/           # Bar chart visualization
+├── pie-chart/           # Pie chart visualization
+├── content-guard/       # Permission-based rendering
+├── file-uploader/       # File upload component
+├── date-input/          # Date picker
+├── phone-input/         # Phone number input
+├── confirm-dialog/      # Confirmation dialog
+├── status-badge/        # Status indicator
+├── severity-card/       # Severity display
+└── shared/              # Shared layout components
+    ├── Navbar.tsx
+    └── Sidebar.tsx
+```
+
+## Schema Directory (`src/schema/`)
+
+Zod validation schemas for all forms:
+
+```
+src/schema/
+├── index.ts             # Re-exports all schemas
+├── shared.ts            # Common validation helpers
+├── auth.ts              # Authentication schemas
+├── assets.ts            # Asset validation
+├── alarms.ts            # Alarm validation
+├── samples.ts           # Sample validation
+├── recommendations.ts   # Recommendation validation
+├── organizations.ts     # Organization validation
+├── sites.ts             # Site validation
+├── departments.ts       # Department validation
+├── roles.ts             # Role validation
+├── permissions.ts       # Permission validation
+├── sampling-points.ts   # Sampling point validation
+├── sampling-routes.ts   # Sampling route validation
+└── user.ts              # User validation
+```
+
+## Stores Directory (`src/stores/`)
+
+Zustand stores for global state management:
+
+```
+src/stores/
+├── index.ts             # Re-exports all stores
+└── sidebar.ts           # Sidebar state
+```
+
+<Note>
+MicroCBM uses minimal global state, preferring server state management with React Query and URL state for filters.
+</Note>
+
+## Hooks Directory (`src/hooks/`)
+
+Custom React hooks for common functionality:
+
+```
+src/hooks/
+├── index.ts             # Re-exports all hooks
+├── useContentGuard.ts   # Permission checking
+├── useDebouncedState.ts # Debounced state management
+├── useUrlState.ts       # URL query params state
+├── usePresignedUrl.ts   # File URL fetching
+└── usePersistedModalState.ts  # Modal state persistence
+```
+
+## Types Directory (`src/types/`)
+
+TypeScript type definitions for the entire application:
+
+```
+src/types/
+├── index.ts             # Main exports
+├── common.ts            # Common types
+├── inventory.ts         # Asset types
+├── samples.ts           # Sample types
+├── alarms.ts            # Alarm types
+├── recommendations.ts   # Recommendation types
+└── rca.ts               # RCA types
+```
+
+## Utils Directory (`src/utils/`)
+
+Utility functions and constants:
+
+```
+src/utils/
+├── constants/           # Application constants
+│   ├── index.ts
+│   ├── routes.ts        # Route definitions
+│   └── modals.ts        # Modal identifiers
+└── helpers/             # Helper functions
+    ├── index.ts
+    └── formatters.ts    # Data formatting utilities
+```
+
+## Configuration Files
+
+### Next.js Configuration
+
+```typescript
+// next.config.ts:1
+import type { NextConfig } from "next";
+
+const securityHeaders = [
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+];
+
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.r2.cloudflarestorage.com",
+      },
+    ],
+  },
+  async headers() {
+    return [{ source: "/(.*)", headers: securityHeaders }];
+  },
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: [{ loader: "@svgr/webpack", options: { icon: true } }],
+    });
+    return config;
+  },
+};
+
+export default nextConfig;
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Follow feature-based organization">
+    Keep related files together in feature directories. Each feature should contain its own components, hooks, and types.
+  </Step>
+  
+  <Step title="Use barrel exports">
+    Each directory should have an `index.ts` file that re-exports its contents for cleaner imports.
+  </Step>
+  
+  <Step title="Separate server and client code">
+    Use `"use server"` and `"use client"` directives appropriately. Server actions go in `src/app/actions/`, client components are marked explicitly.
+  </Step>
+  
+  <Step title="Co-locate related code">
+    Keep components, hooks, and types close to where they're used. Only promote to shared directories when needed across multiple features.
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Setup" icon="gear" href="/development/environment-setup">
+    Set up your development environment
+  </Card>
+  <Card title="Routing" icon="route" href="/development/routing">
+    Learn about Next.js App Router patterns
+  </Card>
+</CardGroup>

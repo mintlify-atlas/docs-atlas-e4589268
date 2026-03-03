@@ -1,0 +1,324 @@
+---
+title: Organizations & Sites
+description: Structure your maintenance operations with multi-organization and multi-site support
+---
+
+## Overview
+
+MicroCBM's organizational hierarchy enables you to manage multiple companies, facilities, and locations within a single platform. This is essential for:
+
+- **Service Providers**: Manage multiple client organizations
+- **Enterprises**: Track assets across multiple sites or business units
+- **OEMs**: Support customers with multi-site installations
+
+<Info>
+  The hierarchy flows: **Organization → Sites → Assets → Sampling Points**
+</Info>
+
+## Organizational Hierarchy
+
+### Organizations
+
+The top-level entity representing a company or client:
+
+**Organization Attributes:**
+- **Name**: Company or client name
+- **Industry**: Sector (Manufacturing, Oil & Gas, Mining, Power Generation, etc.)
+- **Team Strength**: Number of employees (1-10, 11-50, 51-200, 201-500, 500+)
+- **Description**: Business overview
+- **Logo**: Company branding (uploaded image)
+- **Owner**: Primary contact or account owner
+- **Members**: Users belonging to this organization
+- **Sites**: Locations within the organization
+
+### Sites
+
+Physical locations or facilities within an organization:
+
+**Site Attributes:**
+- **Name**: Facility name or identifier
+- **Tag**: Unique site code
+- **Organization**: Parent organization
+- **Address**: Street address
+- **City** and **Country**: Geographic location
+- **Installation Environment**: Indoor, Outdoor, Marine, Harsh, etc.
+- **Regulations and Standards**: ISO, OSHA, API, etc.
+- **Manager**: Site manager contact information (name, email, phone, location)
+- **Description**: Site details
+- **Members**: Users assigned to this site
+- **Attachments**: Site maps, permits, documentation
+
+<Tip>
+  Sites are where assets are installed and where work is performed. Think of them as your operational centers.
+</Tip>
+
+## Creating an Organization
+
+<Note>
+  Organization creation is typically restricted to SuperAdmin or Admin roles.
+</Note>
+
+<Steps>
+  <Step title="Navigate to Organizations">
+    From the main menu, go to **Organizations** (if you have SuperAdmin access).
+  </Step>
+
+  <Step title="Click Add Organization">
+    Select **Add New Organization** from the page header.
+  </Step>
+
+  <Step title="Enter Organization Details">
+    Fill in the required fields:
+    - **Name**: Company name
+    - **Industry**: Select from dropdown
+    - **Team Strength**: Select size range
+    - **Description**: Brief overview
+  </Step>
+
+  <Step title="Upload Logo (Optional)">
+    Add company branding for professional reports and dashboards.
+  </Step>
+
+  <Step title="Assign Owner">
+    Select a user as the primary organization contact.
+  </Step>
+
+  <Step title="Save Organization">
+    Click **Create Organization** to save.
+  </Step>
+</Steps>
+
+## Creating a Site
+
+<Steps>
+  <Step title="Navigate to Sites">
+    From the main menu, go to **Sites** and click **Add New Site**.
+  </Step>
+
+  <Step title="Link to Organization">
+    Select the parent organization from the dropdown.
+    
+    <Note>
+      If you're not a SuperAdmin, the organization is pre-selected to your own.
+    </Note>
+  </Step>
+
+  <Step title="Enter Site Information">
+    **Basic Details:**
+    - **Name**: Facility name
+    - **Tag**: Short identifier (e.g., "SITE-001")
+    - **Description**: Purpose and overview
+    
+    **Location:**
+    - **Address**: Street address
+    - **City**: City name
+    - **Country**: Select from list
+    
+    **Environment:**
+    - **Installation Environment**: Indoor, Outdoor, Marine, Harsh, Controlled, etc.
+    - **Regulations and Standards**: Select applicable standards (ISO 9001, OSHA, API, etc.)
+  </Step>
+
+  <Step title="Add Manager Information">
+    Enter site manager contact details:
+    - **Manager Name**
+    - **Manager Email**
+    - **Manager Phone Number**
+    - **Manager Location**: Office or area
+  </Step>
+
+  <Step title="Upload Attachments (Optional)">
+    Add supporting documents:
+    - Site layout diagrams
+    - Facility permits
+    - Safety procedures
+    - Equipment lists
+  </Step>
+
+  <Step title="Create Site">
+    Click **Create Site** to save. The site is now available for asset assignment.
+  </Step>
+</Steps>
+
+## Managing Organizations
+
+### Viewing Organization Details
+
+Click on an organization to view:
+- All sites within the organization
+- Total member count
+- Industry and team size
+- Logo and branding
+- Owner information
+- Creation and update timestamps
+
+### Editing Organizations
+
+1. Select the organization from the list
+2. Click **Edit**
+3. Modify fields as needed
+4. Save changes
+
+<Warning>
+  Changing an organization's industry may affect reporting categories and benchmarking comparisons.
+</Warning>
+
+### Filtering Organizations
+
+Use filters to find specific organizations:
+- **Search**: Name or description text
+- **Industry**: Filter by sector
+- **Team Strength**: Filter by size range
+
+### Deleting Organizations
+
+<Warning>
+  Deleting an organization will also delete all associated sites, assets, and data. This action is irreversible.
+</Warning>
+
+To delete:
+1. Ensure all sites are removed first (or accept cascade deletion)
+2. Click **Delete** next to the organization
+3. Confirm the action
+
+Only delete organizations that were created in error or are no longer active clients.
+
+## Managing Sites
+
+### Viewing Site Details
+
+Click on a site to see:
+- All assets at the site
+- Site manager contact information
+- Installation environment and regulations
+- Member assignments
+- Attached documents
+
+### Editing Sites
+
+1. Click **Edit** next to the site
+2. Update any fields:
+   - Contact information
+   - Address changes
+   - Environment updates
+   - Manager changes
+3. Save updates
+
+### Site Summary Analytics
+
+The sites dashboard shows:
+- **Total Sites**: Count across all organizations
+- **Sites with Issues**: Number of sites with active alarms or overdue recommendations
+- **Issues Trend Percentage**: Rate of change in problem sites
+- **Sites Trend Percentage**: Growth rate of site count
+
+### Filtering Sites
+
+Filter sites by:
+- **Search**: Name, tag, or city
+- **Organization**: Parent company
+- **Country**: Geographic location
+- **Installation Environment**: Indoor, Outdoor, etc.
+
+### Deleting Sites
+
+<Warning>
+  Deleting a site will delete all assets, samples, alarms, and recommendations associated with that location.
+</Warning>
+
+To delete:
+1. Verify no active assets remain (or accept cascade deletion)
+2. Click **Delete**
+3. Confirm in the dialog
+
+## Role-Based Access by Organization & Site
+
+Users are assigned to organizations and sites, which controls what they can see and do:
+
+### SuperAdmin
+- See all organizations and sites
+- Create/edit/delete any organization or site
+- Manage users across all organizations
+
+### Organization Admin
+- See only their organization's sites
+- Create/edit/delete sites within their organization
+- Manage users within their organization
+
+### Site Users
+- See only their assigned site(s)
+- View/edit assets at their site
+- Cannot create new sites
+- Cannot see other sites in the organization
+
+<Tip>
+  Assign users to the most restrictive role needed for their job to maintain data security.
+</Tip>
+
+## Use Cases
+
+### Multi-Client Service Provider
+
+**Scenario**: You provide maintenance services to 10 different manufacturing plants.
+
+**Setup**:
+- Create 10 organizations (one per client)
+- Each organization has 1-3 sites
+- Assign your service technicians to relevant sites
+- Each client only sees their own data
+- You (SuperAdmin) see everything
+
+### Enterprise with Multiple Facilities
+
+**Scenario**: Large oil & gas company with offshore platforms and onshore processing plants.
+
+**Setup**:
+- Single organization (your company)
+- Multiple sites:
+  - Platform A (Marine environment)
+  - Platform B (Marine environment)
+  - Processing Plant 1 (Outdoor, Harsh)
+  - Processing Plant 2 (Indoor, Controlled)
+- Assets distributed across sites
+- Site managers assigned to each location
+
+### OEM Equipment Monitoring
+
+**Scenario**: You manufacture compressors and monitor customer installations.
+
+**Setup**:
+- Each customer is an organization
+- Each installation location is a site
+- Your equipment (assets) are tracked at customer sites
+- Customers access their own data portal
+- You monitor all installations from a central dashboard
+
+## Best Practices
+
+1. **Hierarchical Naming**: Use consistent prefixes (ORG-001, SITE-A1) for easy identification
+2. **Accurate Geography**: Correct city/country enables regional reporting and maps
+3. **Environment Tags**: Properly categorize installation environments for relevant standards
+4. **Manager Contacts**: Keep site manager information current for escalations
+5. **Logo Uploads**: Professional branding improves client-facing reports
+6. **Documentation**: Attach site maps and key documents for quick reference
+7. **Regular Reviews**: Audit organization/site list quarterly to remove inactive entries
+
+## Site Analytics and Reporting
+
+Leverage organizational structure for insights:
+
+- **Cross-Site Comparisons**: Benchmark sites against each other
+- **Organizational Rollups**: Aggregate metrics across all sites in an organization
+- **Regional Analysis**: Compare performance by country or region
+- **Environment Trends**: Identify if harsh environments lead to more issues
+
+<Tip>
+  Use the filter "Sites with Issues" to quickly identify locations needing attention.
+</Tip>
+
+## Related Features
+
+- **[Asset Management](/features/asset-management)**: Assets belong to sites within organizations
+- **[User Management](/features/user-management)**: Users are assigned to organizations and sites
+- **[Alarms](/features/alarm-monitoring)**: Alarms are scoped to sites
+- **[Recommendations](/features/recommendations)**: Recommendations are site-specific

@@ -1,0 +1,866 @@
+---
+title: Helper Functions
+description: Utility functions for formatting, data transformation, and common operations
+---
+
+Helper functions provide reusable utilities for date formatting, string manipulation, file operations, pagination, and role-based access control.
+
+## Date & Time Helpers
+
+Functions for working with dates and timestamps.
+
+### formatDate
+
+Formats a timestamp or date string according to a specified format and timezone.
+
+<ParamField path="value" type="string | number" required>
+  The date value to format (timestamp or date string)
+</ParamField>
+
+<ParamField path="format" type="string" default="DD - MM - YYYY">
+  The output format using Day.js format tokens
+</ParamField>
+
+<ParamField path="userTimezone" type="string">
+  IANA timezone name (e.g., `"America/New_York"`, `"Europe/London"`). If omitted, uses local timezone.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Formatted date string, or empty string if invalid
+</ResponseField>
+
+<CodeGroup>
+```typescript Basic Usage
+import { formatDate } from "@/utils";
+
+const timestamp = 1709481600000;
+const formatted = formatDate(timestamp);
+// Output: "03 - 03 - 2024"
+```
+
+```typescript Custom Format
+const formatted = formatDate(timestamp, "MMM DD, YYYY");
+// Output: "Mar 03, 2024"
+```
+
+```typescript With Timezone
+const formatted = formatDate(
+  timestamp,
+  "DD/MM/YYYY HH:mm",
+  "America/New_York"
+);
+// Output: "03/03/2024 07:00" (EST)
+```
+
+```tsx In Component
+const SampleRow = ({ sample }) => (
+  <td>{formatDate(sample.date_sampled, "MMM DD, YYYY")}</td>
+);
+```
+</CodeGroup>
+
+<Note>
+**Timezone Handling**: The function parses input as UTC and converts to the specified timezone. Always store timestamps in UTC on the backend.
+</Note>
+
+## String Manipulation
+
+Functions for transforming and formatting strings.
+
+### toKebabCase
+
+Converts camelCase or PascalCase strings to kebab-case.
+
+<ParamField path="str" type="string" required>
+  String to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  kebab-case string
+</ResponseField>
+
+```typescript
+import { toKebabCase } from "@/utils";
+
+toKebabCase("assetManagement"); // "asset-management"
+toKebabCase("OilSampleAnalysis"); // "oil-sample-analysis"
+```
+
+### camelToSpaced
+
+Converts camelCase to lowercase with spaces.
+
+<ParamField path="str" type="string" required>
+  String to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Lowercase string with spaces
+</ResponseField>
+
+```typescript
+import { camelToSpaced } from "@/utils";
+
+camelToSpaced("assetManagement"); // "asset management"
+camelToSpaced("oilSampleAnalysis"); // "oil sample analysis"
+```
+
+### sentenceCase
+
+Converts a string to sentence case (capitalizes first letter of sentences).
+
+<ParamField path="str" type="string" required>
+  String to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Sentence-cased string
+</ResponseField>
+
+```typescript
+import { sentenceCase } from "@/utils";
+
+sentenceCase("hello world. this is a test.");
+// "Hello world. This is a test."
+```
+
+### makeDropdownOptions
+
+Transforms an array of strings into dropdown options with sentence-cased labels.
+
+<ParamField path="items" type="string[]" required>
+  Array of string values
+</ParamField>
+
+<ResponseField name="return" type="Array<{ label: string; value: string }>">
+  Array of dropdown options
+</ResponseField>
+
+```typescript
+import { makeDropdownOptions } from "@/utils";
+
+const options = makeDropdownOptions(["active", "inactive", "pending"]);
+// [
+//   { label: "Active", value: "active" },
+//   { label: "Inactive", value: "inactive" },
+//   { label: "Pending", value: "pending" },
+// ]
+```
+
+## Query String Helpers
+
+Functions for building URL query parameters.
+
+### getQueryString
+
+Builds a URL query string from an object, excluding null, undefined, and empty string values.
+
+<ParamField path="obj" type="Record<string, unknown>">
+  Object with query parameters
+</ParamField>
+
+<ResponseField name="return" type="string">
+  URL-encoded query string (without leading `?`)
+</ResponseField>
+
+<CodeGroup>
+```typescript Basic Usage
+import { getQueryString } from "@/utils";
+
+const params = {
+  page: 1,
+  limit: 10,
+  status: "active",
+  search: "", // Excluded
+  filter: null, // Excluded
+};
+
+const query = getQueryString(params);
+// "page=1&limit=10&status=active"
+```
+
+```typescript With Server Actions
+import { getQueryString } from "@/utils";
+import { getAssets } from "@/actions/assets";
+
+const fetchAssets = async (filters) => {
+  const queryString = getQueryString(filters);
+  const assets = await getAssets(queryString);
+  return assets;
+};
+```
+</CodeGroup>
+
+### getTarget
+
+Extracts a nested value from an object using a dot-notation path.
+
+<ParamField path="inputObj" type="Record<string, unknown>" required>
+  Source object
+</ParamField>
+
+<ParamField path="path" type="string | string[]" required>
+  Path to the target value (e.g., `"user.profile.name"` or `["user", "profile", "name"]`)
+</ParamField>
+
+<ResponseField name="return" type="unknown">
+  The value at the path, or `undefined` if not found
+</ResponseField>
+
+```typescript
+import { getTarget } from "@/utils";
+
+const data = {
+  user: {
+    profile: {
+      name: "John Doe",
+      email: "john@example.com",
+    },
+  },
+};
+
+getTarget(data, "user.profile.name"); // "John Doe"
+getTarget(data, ["user", "profile", "email"]); // "john@example.com"
+getTarget(data, "user.missing.field"); // undefined
+```
+
+## Formatting Helpers
+
+Functions for formatting data for display.
+
+### formatCurrency
+
+Formats a number as currency with locale-specific formatting.
+
+<ParamField path="value" type="number" required>
+  Amount to format
+</ParamField>
+
+<ParamField path="currency" type="string" default="NGN">
+  Currency code (ISO 4217)
+</ParamField>
+
+<ParamField path="fractionalDigit" type="number" default="2">
+  Maximum number of decimal places
+</ParamField>
+
+<ParamField path="locale" type="string" default="en-NG">
+  Locale for number formatting
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Formatted currency string
+</ResponseField>
+
+```typescript
+import { formatCurrency } from "@/utils";
+
+formatCurrency(1500.5); // "₦1,500.50"
+formatCurrency(1000, "USD", 2, "en-US"); // "$1,000"
+formatCurrency(2500.0); // "₦2,500" (removes .00)
+```
+
+### formatFileSize
+
+Formats a file size in bytes to a human-readable string.
+
+<ParamField path="sizeInBytes" type="number" required>
+  File size in bytes
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Formatted file size (e.g., `"1.5 MB"`, `"250 KB"`)
+</ResponseField>
+
+```typescript
+import { formatFileSize } from "@/utils";
+
+formatFileSize(500); // "500 B"
+formatFileSize(2048); // "2.00 KB"
+formatFileSize(1572864); // "1.50 MB"
+```
+
+### maskNumber
+
+Masks a phone number or other numeric string by showing only the first 3 and last 2 digits.
+
+<ParamField path="number" type="string | null" required>
+  Number to mask (can include non-digit characters)
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Masked number string, or empty string if input is null
+</ResponseField>
+
+```typescript
+import { maskNumber } from "@/utils";
+
+maskNumber("+234 803 123 4567"); // "234*******67"
+maskNumber("08031234567"); // "080*****67"
+maskNumber(null); // ""
+```
+
+<Note>
+**Error Handling**: Throws an error if the number has fewer than 5 digits.
+</Note>
+
+### getFullName
+
+Combines first and last name into a full name.
+
+<ParamField path="customer" type="{ first_name: string; last_name: string }" required>
+  Object with name fields
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Full name with space separator
+</ResponseField>
+
+```typescript
+import { getFullName } from "@/utils";
+
+getFullName({ first_name: "John", last_name: "Doe" }); // "John Doe"
+getFullName({ first_name: "Jane", last_name: "" }); // "Jane"
+```
+
+### formatRoleNames
+
+Formats an array of roles for display, showing up to 2 names and a count for additional roles.
+
+<ParamField path="arr" type="Array<{ name: string }>" required>
+  Array of role objects
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Formatted role names string
+</ResponseField>
+
+```typescript
+import { formatRoleNames } from "@/utils";
+
+formatRoleNames([{ name: "Admin" }]); 
+// "Admin"
+
+formatRoleNames([{ name: "Admin" }, { name: "Analyst" }]); 
+// "Admin, Analyst"
+
+formatRoleNames([
+  { name: "Admin" },
+  { name: "Analyst" },
+  { name: "Viewer" },
+  { name: "Technician" },
+]);
+// "Admin, Analyst +2 more"
+```
+
+## Status Helpers
+
+Functions for determining UI variants and text for status values.
+
+### getStatusVariant
+
+Returns the appropriate color variant for a status or severity value.
+
+<ParamField path="status" type="string">
+  Status or severity string
+</ParamField>
+
+<ResponseField name="return" type="'success' | 'warning' | 'error'">
+  Color variant for UI components
+</ResponseField>
+
+```typescript
+import { getStatusVariant } from "@/utils";
+
+getStatusVariant("active"); // "success"
+getStatusVariant("completed"); // "success"
+getStatusVariant("low"); // "success"
+
+getStatusVariant("pending"); // "warning"
+getStatusVariant("medium"); // "warning"
+
+getStatusVariant("inactive"); // "error"
+getStatusVariant("critical"); // "error"
+getStatusVariant("high"); // "error"
+
+getStatusVariant("unknown"); // "warning" (default)
+```
+
+<CodeGroup>
+```tsx Status Badge
+import { getStatusVariant } from "@/utils";
+import { Badge } from "@/components/ui/badge";
+
+const StatusBadge = ({ status }) => {
+  const variant = getStatusVariant(status);
+  return <Badge variant={variant}>{status}</Badge>;
+};
+```
+
+```tsx Severity Indicator
+const SeverityCell = ({ severity }) => {
+  const variant = getStatusVariant(severity);
+  const colors = {
+    success: "bg-green-100 text-green-800",
+    warning: "bg-yellow-100 text-yellow-800",
+    error: "bg-red-100 text-red-800",
+  };
+  
+  return (
+    <span className={`px-2 py-1 rounded ${colors[variant]}`}>
+      {severity}
+    </span>
+  );
+};
+```
+</CodeGroup>
+
+### getStatusText
+
+Normalizes status values to display text.
+
+<ParamField path="status" type="string">
+  Status value
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Display text for the status
+</ResponseField>
+
+```typescript
+import { getStatusText } from "@/utils";
+
+getStatusText("active"); // "Active"
+getStatusText("inactive"); // "Inactive"
+getStatusText("deactivated"); // "Deactivated"
+getStatusText("deactivate"); // "Deactivated"
+getStatusText("unknown"); // "Pending" (default)
+```
+
+### getTrendData
+
+Generates trend indicator data (icon and label) from a percentage change.
+
+<ParamField path="percentage" type="number" required>
+  Percentage change (positive or negative)
+</ParamField>
+
+<ResponseField name="return" type="{ icon: string; label: string; isPositive: boolean }">
+  Trend indicator data
+</ResponseField>
+
+```typescript
+import { getTrendData } from "@/utils";
+
+getTrendData(12.5);
+// {
+//   icon: "mdi:trending-up",
+//   label: "+12.5% from last period",
+//   isPositive: true
+// }
+
+getTrendData(-8.3);
+// {
+//   icon: "mdi:trending-down",
+//   label: "+8.3% from last period",
+//   isPositive: false
+// }
+```
+
+## File Operations
+
+Functions for generating and downloading files.
+
+### generateAndDownloadCsv
+
+Generates a CSV file from data and triggers a browser download.
+
+<ParamField path="options" type="generateCsvParams" required>
+  CSV generation options
+  
+  <Expandable title="properties">
+    <ParamField path="headers" type="Array<CsvHeader>" required>
+      Column definitions
+      - `name`: Column header text
+      - `accessor`: Path to the data field (dot notation)
+      - `transform`: Optional function to transform the value
+    </ParamField>
+    
+    <ParamField path="data" type="Array<any>" required>
+      Array of data objects to export
+    </ParamField>
+    
+    <ParamField path="fileName" type="string" required>
+      Download file name (without extension)
+    </ParamField>
+    
+    <ParamField path="separator" type="string" default=",">
+      CSV delimiter character
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<CodeGroup>
+```typescript Basic Export
+import { generateAndDownloadCsv } from "@/utils";
+
+const assets = [
+  { id: "1", name: "Pump A", status: "active", commissioned: 1704067200000 },
+  { id: "2", name: "Motor B", status: "inactive", commissioned: 1706745600000 },
+];
+
+generateAndDownloadCsv({
+  headers: [
+    { name: "ID", accessor: "id" },
+    { name: "Name", accessor: "name" },
+    { name: "Status", accessor: "status" },
+    {
+      name: "Commissioned",
+      accessor: "commissioned",
+      transform: (val) => new Date(val).toLocaleDateString(),
+    },
+  ],
+  data: assets,
+  fileName: "assets-export",
+});
+```
+
+```typescript Nested Data
+const samples = [
+  {
+    id: "s1",
+    asset: { name: "Pump A", tag: "PMP-001" },
+    severity: "low",
+  },
+  {
+    id: "s2",
+    asset: { name: "Motor B", tag: "MTR-002" },
+    severity: "high",
+  },
+];
+
+generateAndDownloadCsv({
+  headers: [
+    { name: "Sample ID", accessor: "id" },
+    { name: "Asset", accessor: "asset.name" },
+    { name: "Tag", accessor: "asset.tag" },
+    { name: "Severity", accessor: "severity" },
+  ],
+  data: samples,
+  fileName: "samples-export",
+});
+```
+
+```typescript With Transform
+generateAndDownloadCsv({
+  headers: [
+    { name: "Asset", accessor: "name" },
+    {
+      name: "Status",
+      accessor: "status",
+      transform: (val) => val.toUpperCase(),
+    },
+    {
+      name: "Commissioned",
+      accessor: "commissioned_date",
+      transform: (val) => formatDate(val, "DD/MM/YYYY"),
+    },
+  ],
+  data: assets,
+  fileName: "assets-report",
+});
+```
+</CodeGroup>
+
+### generateCsv
+
+Generates a CSV Blob without triggering download.
+
+<ParamField path="options" type="generateCsvParams" required>
+  Same as `generateAndDownloadCsv`
+</ParamField>
+
+<ResponseField name="return" type="Blob">
+  CSV file as a Blob object
+</ResponseField>
+
+```typescript
+import { generateCsv } from "@/utils";
+
+const csvBlob = generateCsv({
+  headers: [{ name: "Name", accessor: "name" }],
+  data: [{ name: "Asset 1" }],
+  fileName: "export",
+});
+
+// Upload to server or attach to email
+const formData = new FormData();
+formData.append("file", csvBlob, "export.csv");
+```
+
+### downloadFile
+
+Triggers a browser download for a Blob or File.
+
+<ParamField path="file" type="Blob | File" required>
+  File to download
+</ParamField>
+
+<ParamField path="fileName" type="string" default="csv-file">
+  Download file name
+</ParamField>
+
+```typescript
+import { downloadFile } from "@/utils";
+
+const blob = new Blob(["Hello, World!"], { type: "text/plain" });
+downloadFile(blob, "hello.txt");
+```
+
+## Pagination
+
+Functions for generating pagination UI.
+
+### generateDottedPages
+
+Generates a page number array with ellipsis for pagination controls.
+
+<ParamField path="page" type="number" default="1">
+  Current page number
+</ParamField>
+
+<ParamField path="totalPages" type="number" required>
+  Total number of pages
+</ParamField>
+
+<ParamField path="radius" type="number" default="2">
+  Number of pages to show on each side of current page
+</ParamField>
+
+<ParamField path="dotRepresentation" type="string" default="...">
+  String to represent ellipsis
+</ParamField>
+
+<ResponseField name="return" type="Array<string | number>">
+  Array of page numbers and ellipsis markers
+</ResponseField>
+
+<CodeGroup>
+```typescript Basic Usage
+import { generateDottedPages } from "@/utils";
+
+generateDottedPages({ page: 1, totalPages: 10 });
+// [1, 2, 3, "...", 10]
+
+generateDottedPages({ page: 5, totalPages: 10 });
+// [1, "...", 3, 4, 5, 6, 7, "...", 10]
+
+generateDottedPages({ page: 10, totalPages: 10 });
+// [1, "...", 8, 9, 10]
+```
+
+```typescript Custom Radius
+generateDottedPages({ page: 5, totalPages: 20, radius: 1 });
+// [1, "...", 4, 5, 6, "...", 20]
+
+generateDottedPages({ page: 5, totalPages: 20, radius: 3 });
+// [1, 2, 3, 4, 5, 6, 7, 8, "...", 20]
+```
+
+```tsx Pagination Component
+import { generateDottedPages } from "@/utils";
+
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  const pages = generateDottedPages({ page: currentPage, totalPages });
+  
+  return (
+    <div className="flex gap-2">
+      {pages.map((page, index) => (
+        typeof page === "number" ? (
+          <button
+            key={index}
+            onClick={() => onPageChange(page)}
+            className={currentPage === page ? "active" : ""}
+          >
+            {page}
+          </button>
+        ) : (
+          <span key={index}>{page}</span>
+        )
+      ))}
+    </div>
+  );
+};
+```
+</CodeGroup>
+
+## Role & Permission Helpers
+
+Functions for working with roles and permissions.
+
+### getAllAdminPermissions
+
+Extracts all permissions from a role or array of roles.
+
+<ParamField path="roles" type="Role | Role[]">
+  Role object or array of role objects with `permissions` property
+</ParamField>
+
+<ResponseField name="return" type="PermissionType[] | string[]">
+  Flattened array of all permissions
+</ResponseField>
+
+```typescript
+import { getAllAdminPermissions } from "@/utils";
+
+const role = {
+  id: "1",
+  name: "Analyst",
+  permissions: ["assets:read", "samples:read", "samples:create"],
+};
+
+getAllAdminPermissions(role);
+// ["assets:read", "samples:read", "samples:create"]
+
+const roles = [
+  { permissions: ["assets:read"] },
+  { permissions: ["samples:read", "alarms:read"] },
+];
+
+getAllAdminPermissions(roles);
+// ["assets:read", "samples:read", "alarms:read"]
+```
+
+### getFirstRouteFromUser
+
+Finds the first accessible route for a user based on their permissions.
+
+<ParamField path="menuItems" type="MenuItem[]" required>
+  Application menu structure (from `@/utils/shared`)
+</ParamField>
+
+<ParamField path="userPermissions" type="PermissionType[]" required>
+  User's permission array
+</ParamField>
+
+<ResponseField name="return" type="string | null">
+  First matching route path, or `null` if no match
+</ResponseField>
+
+<CodeGroup>
+```typescript Redirect After Login
+import { getFirstRouteFromUser } from "@/utils";
+import menuItems from "@/utils/shared";
+import { redirect } from "next/navigation";
+
+const userPermissions = ["samples:read", "alarms:read"];
+const firstRoute = getFirstRouteFromUser(menuItems, userPermissions);
+
+if (firstRoute) {
+  redirect(firstRoute); // Redirects to "/samples"
+}
+```
+
+```typescript Dashboard Redirect
+const DashboardRedirect = ({ user }) => {
+  const permissions = getAllAdminPermissions(user.roles);
+  const route = getFirstRouteFromUser(menuItems, permissions);
+  
+  return route ? <Navigate to={route} /> : <NoAccessPage />;
+};
+```
+</CodeGroup>
+
+### getAdminRoles
+
+Transforms admin roles into dropdown options.
+
+<ParamField path="roles" type="IAdmin['roles']">
+  Admin roles array
+</ParamField>
+
+<ResponseField name="return" type="Array<{ label: string; value: string }>">
+  Dropdown options array
+</ResponseField>
+
+```typescript
+import { getAdminRoles } from "@/utils";
+
+const admin = {
+  roles: [
+    { id: "1", name: "Admin" },
+    { id: "2", name: "Analyst" },
+  ],
+};
+
+getAdminRoles(admin.roles);
+// [
+//   { label: "Admin", value: "1" },
+//   { label: "Analyst", value: "2" },
+// ]
+```
+
+## Data Transformation
+
+### transformStaffCsvData
+
+Transforms CSV import data into the format expected by the user creation API.
+
+<ParamField path="data" type="StaffCsvDataItem[]" required>
+  Array of CSV row objects
+</ParamField>
+
+<ResponseField name="return" type="Array<UserCreatePayload>">
+  Transformed user data
+</ResponseField>
+
+```typescript
+import { transformStaffCsvData } from "@/utils";
+
+const csvData = [
+  {
+    staffName: "John Doe",
+    emailAddress: "john@example.com",
+    phoneNumber: "08031234567",
+    assignedRole: "Analyst",
+  },
+  {
+    staffName: "Jane Smith",
+    emailAddress: "jane@example.com",
+    phoneNumber: 8031234568,
+    assignedRole: "Viewer",
+  },
+];
+
+const transformed = transformStaffCsvData(csvData);
+// [
+//   {
+//     first_name: "John",
+//     last_name: "Doe",
+//     email: "john@example.com",
+//     phone_number: "08031234567",
+//     role_names: ["Analyst"],
+//   },
+//   {
+//     first_name: "Jane",
+//     last_name: "Smith",
+//     email: "jane@example.com",
+//     phone_number: "8031234568",
+//     role_names: ["Viewer"],
+//   },
+// ]
+```
+
+## Best Practices
+
+<Note>
+**Date Formatting**: Always use `formatDate()` instead of manual date formatting to ensure consistent timezone handling and format across the application.
+</Note>
+
+<Note>
+**CSV Exports**: Use `generateAndDownloadCsv()` for user-triggered exports. Use `generateCsv()` if you need to upload the file to a server or process it further.
+</Note>
+
+<Note>
+**Status Variants**: Use `getStatusVariant()` to maintain consistent color coding for statuses and severities across the UI.
+</Note>

@@ -1,0 +1,379 @@
+---
+title: System Architecture
+description: Understanding MicroCBM's architecture, tech stack, and design patterns
+icon: sitemap
+---
+
+## Overview
+
+MicroCBM is a modern **Next.js 15** frontend application built with the App Router pattern. It's a single-service application that communicates with an external REST API for all data operations. The architecture emphasizes security, performance, and maintainability.
+
+<Note>
+This is a frontend-only application. There is no backend code, database, or Docker configuration in this repository.
+</Note>
+
+## Tech Stack
+
+### Core Framework
+
+<CardGroup cols={2}>
+  <Card title="Next.js 15" icon="react">
+    App Router with React Server Components and Server Actions
+  </Card>
+  <Card title="React 19" icon="atom">
+    Latest React with improved server-side rendering capabilities
+  </Card>
+  <Card title="TypeScript" icon="code">
+    Full type safety across the entire application
+  </Card>
+  <Card title="Tailwind CSS 4" icon="palette">
+    Utility-first CSS framework for styling
+  </Card>
+</CardGroup>
+
+### Key Dependencies
+
+From `package.json`:
+
+```json package.json
+{
+  "dependencies": {
+    "next": "15.5.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "@tanstack/react-query": "^5.90.2",
+    "@tanstack/react-table": "^8.21.3",
+    "react-hook-form": "^7.64.0",
+    "zod": "^4.1.11",
+    "jose": "^6.1.0",
+    "zustand": "^5.0.9",
+    "recharts": "^3.2.1",
+    "@xyflow/react": "^12.10.1"
+  }
+}
+```
+
+## Application Structure
+
+### Directory Layout
+
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── (home)/            # Protected routes (dashboard, assets, etc.)
+│   ├── auth/              # Authentication pages (login, signup, reset)
+│   ├── actions/           # Server Actions for API calls
+│   └── hooks/             # Custom React hooks
+├── components/            # Reusable UI components
+├── libs/                  # Core utilities (JWT, session, etc.)
+├── types/                 # TypeScript type definitions
+├── utils/                 # Helper functions and constants
+├── schema/                # Zod validation schemas
+└── middleware.ts          # Route protection middleware
+```
+
+### Route Organization
+
+**Public Routes** (under `app/auth/`):
+- `/auth/login` - User login
+- `/auth/sign-up` - New user registration
+- `/auth/reset` - Password reset flow
+
+**Protected Routes** (under `app/(home)/`):
+- `/` - Dashboard with analytics
+- `/assets` - Asset inventory management
+- `/samples` - Oil sample analysis
+- `/alarms` - Alarm monitoring
+- `/recommendations` - Maintenance recommendations
+- `/user-management` - User and role management
+- `/sites`, `/departments` - Organization structure
+
+<Info>
+The `(home)` folder uses Next.js route groups to apply shared layouts and middleware without affecting the URL structure.
+</Info>
+
+## Security Architecture
+
+### Middleware Protection
+
+All routes are protected by Next.js middleware that validates JWT tokens:
+
+```typescript src/middleware.ts
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get("token")?.value;
+  const isPublic = isPublicPath(pathname);
+
+  if (token && isTokenExpired(token)) {
+    const response = isPublic
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+    response.cookies.delete("token");
+    response.cookies.delete("userData");
+    return response;
+  }
+
+  if (!isPublic && !token) {
+    return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, req.nextUrl));
+  }
+
+  if (isPublic && token) {
+    return NextResponse.redirect(new URL(ROUTES.HOME, req.nextUrl));
+  }
+
+  return NextResponse.next();
+}
+```
+
+Key features:
+- Automatic token expiration checking
+- Cookie cleanup on expired tokens
+- Redirect logic for authenticated/unauthenticated users
+- Excludes static assets and API routes
+
+### Security Headers
+
+Configured in `next.config.ts`:
+
+```typescript next.config.ts
+const securityHeaders = [
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+];
+
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/(.*)", headers: securityHeaders }];
+  },
+};
+```
+
+<Warning>
+The `X-Powered-By` header is disabled to prevent exposing the framework version.
+</Warning>
+
+## Data Fetching Patterns
+
+### Server Actions
+
+MicroCBM uses Next.js Server Actions for all API communication. Server Actions run on the server and provide type-safe data fetching:
+
+```typescript src/app/actions/inventory.ts
+"use server";
+
+async function getAssetsService(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}): Promise<GetAssetsResult> {
+  try {
+    const searchParams = new URLSearchParams();
+    if (params?.page != null) searchParams.set("page", String(params.page));
+    if (params?.limit != null) searchParams.set("limit", String(params.limit));
+    if (params?.search) searchParams.set("search", String(params.search));
+    
+    const url = `${commonEndpoint}assets${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    const response = await requestWithAuth(url, { method: "GET" });
+
+    if (response.status === 403) {
+      console.warn("User does not have permission to access assets");
+      return { data: [], meta: { /* ... */ } };
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch assets: ${response.status}`);
+    }
+
+    const json = await response.json();
+    return {
+      data: Array.isArray(json?.data) ? json.data : [],
+      meta: json?.meta ?? { /* defaults */ }
+    };
+  } catch (error) {
+    console.error("Error fetching assets:", error);
+    return { data: [], meta: { /* defaults */ } };
+  }
+}
+```
+
+### Request Helper with Auth
+
+All API requests include automatic authentication:
+
+```typescript src/app/actions/helpers.ts
+export async function requestWithAuth(
+  input: RequestInfo,
+  init?: RequestInit,
+): Promise<Response> {
+  const token = (await cookies()).get("token")?.value;
+  const headers = new Headers(init?.headers || {});
+  headers.set("Content-Type", "application/json");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const requestInit: RequestInit = { ...init, headers };
+  const url = `${process.env.NEXT_PUBLIC_API_URL}${input}`;
+
+  return fetch(url, requestInit);
+}
+```
+
+## State Management
+
+### Server State (React Query)
+
+Used for data fetching, caching, and synchronization with the backend API.
+
+### Client State (Zustand)
+
+Used for UI state, form state, and temporary client-side data.
+
+### Form State (React Hook Form + Zod)
+
+All forms use React Hook Form with Zod validation schemas:
+
+```typescript
+const schema = z.object({
+  email: z.string().email({ message: "Invalid email address" }),
+  password: z
+    .string()
+    .min(8, { message: "Password must be at least 8 characters" }),
+});
+
+type FormData = z.infer<typeof schema>;
+```
+
+## Permission-Based Access Control
+
+### Component-Level Guards
+
+The application uses a permission-based system for fine-grained access control:
+
+```typescript src/app/(home)/page.tsx
+<ComponentGuard
+  permissions="dashboard:read"
+  loadingFallback={<div>Loading...</div>}
+  unauthorizedFallback={<div>You do not have permission to view the dashboard.</div>}
+>
+  <main className="flex flex-col gap-4">
+    <Summary />
+    <LineChart />
+  </main>
+</ComponentGuard>
+```
+
+Permissions are stored in the JWT token payload and checked on both client and server.
+
+## SEO Configuration
+
+### Per-Page Metadata
+
+Each page defines its own metadata:
+
+```typescript
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: "Dashboard" };
+}
+```
+
+The root layout applies a title template:
+
+```typescript src/app/layout.tsx
+export const metadata: Metadata = {
+  title: {
+    template: "%s | MicroCBM",
+    default: "MicroCBM"
+  },
+  description: "Condition-Based Maintenance Platform"
+};
+```
+
+### SEO Files
+
+- `src/app/robots.ts` - Robots.txt configuration
+- `src/app/sitemap.ts` - Sitemap generation
+- `src/app/manifest.ts` - PWA manifest
+
+## Image Optimization
+
+Configured for Cloudflare R2 storage:
+
+```typescript next.config.ts
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.r2.cloudflarestorage.com",
+      },
+    ],
+  },
+};
+```
+
+## Build Considerations
+
+<Warning>
+The build produces expected warnings about dynamic routes using `cookies()` during static generation. These warnings are harmless and occur because protected routes require authentication checks.
+</Warning>
+
+### Critical Layout Rules
+
+1. **Do NOT remove** `"use server"` from `src/app/(home)/layout.tsx` - it affects how Next.js treats the page tree during build
+2. **Do NOT add** `loading.tsx` to `src/app/(home)/` - it changes static analysis behavior and breaks the build
+3. Per-page metadata for `"use server"` pages must be placed in companion `layout.tsx` files or use `generateMetadata()`
+
+## Environment Variables
+
+Required environment variables:
+
+```bash .env.local
+NEXT_PUBLIC_API_URL=https://api.example.com
+SESSION_SECRET=your-secret-key-here
+```
+
+<Info>
+Without a running backend API, auth pages will still render and forms are interactive, but data-dependent pages will show errors.
+</Info>
+
+## Performance Optimizations
+
+1. **Server Components by default** - Reduces client-side JavaScript
+2. **Parallel data fetching** - Multiple API calls in `Promise.all()`
+3. **Image optimization** - Next.js automatic image optimization
+4. **Code splitting** - Automatic route-based code splitting
+5. **SVG optimization** - Custom webpack loader for SVG icons
+
+```typescript next.config.ts
+webpack: (config) => {
+  config.module.rules.push({
+    test: /\.svg$/,
+    use: [{ loader: "@svgr/webpack", options: { icon: true } }],
+  });
+  return config;
+};
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Authentication Flow" href="/concepts/authentication" icon="lock">
+    Learn about JWT tokens, OTP verification, and session management
+  </Card>
+  <Card title="Data Flow" href="/concepts/data-flow" icon="arrow-right-arrow-left">
+    Understand how data flows through the application
+  </Card>
+  <Card title="Project Structure" href="/development/project-structure" icon="folder-tree">
+    Detailed guide to the codebase organization
+  </Card>
+  <Card title="Environment Setup" href="/development/environment-setup" icon="gear">
+    Configure your development environment
+  </Card>
+</CardGroup>

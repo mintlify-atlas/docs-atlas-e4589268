@@ -89,9 +89,13 @@
               "api/actions/overview",
               "api/actions/assets",
               "api/actions/samples",
+              "api/actions/sampling-points",
+              "api/actions/sampling-routes",
               "api/actions/alarms",
               "api/actions/recommendations",
               "api/actions/organizations",
+              "api/actions/users",
+              "api/actions/roles",
               "api/actions/auth"
             ]
           },

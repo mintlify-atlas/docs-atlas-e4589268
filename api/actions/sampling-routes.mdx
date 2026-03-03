@@ -1,0 +1,432 @@
+---
+title: Sampling Route Actions
+description: Server Actions for managing sampling routes
+---
+
+## Overview
+
+Sampling route actions provide CRUD operations for sampling routes. All functions are located in `src/app/actions/sampling-routes.ts`.
+
+## Sampling Route Operations
+
+### getSamplingRoutesService
+
+Retrieves a paginated list of sampling routes with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="search" type="string" optional>
+    Search term for filtering sampling routes
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="SamplingRoute[]">
+  Array of sampling route objects
+</ResponseField>
+
+<ResponseField name="meta" type="SamplingRoutesMeta">
+  Pagination metadata
+  
+  <ResponseField name="page" type="number">
+    Current page number
+  </ResponseField>
+  
+  <ResponseField name="limit" type="number">
+    Items per page
+  </ResponseField>
+  
+  <ResponseField name="total" type="number">
+    Total number of sampling routes
+  </ResponseField>
+  
+  <ResponseField name="total_pages" type="number">
+    Total number of pages
+  </ResponseField>
+  
+  <ResponseField name="has_next" type="boolean">
+    Whether there is a next page
+  </ResponseField>
+  
+  <ResponseField name="has_prev" type="boolean">
+    Whether there is a previous page
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getSamplingRoutesService } from "@/app/actions";
+
+export default async function SamplingRoutesPage({ searchParams }) {
+  const params = await searchParams;
+  const page = parseInt(String(params?.page ?? 1), 10);
+  const limit = parseInt(String(params?.limit ?? 10), 10);
+  const search = typeof params?.search === "string" ? params.search : "";
+
+  const { data: samplingRoutes, meta } = await getSamplingRoutesService({ 
+    page, 
+    limit, 
+    search 
+  });
+
+  return <SamplingRouteTable data={samplingRoutes} meta={meta} />;
+}
+```
+
+```typescript With Search
+import { getSamplingRoutesService } from "@/app/actions";
+
+const { data: samplingRoutes, meta } = await getSamplingRoutesService({
+  page: 1,
+  limit: 20,
+  search: "weekly",
+});
+```
+
+```typescript Error Handling
+import { getSamplingRoutesService } from "@/app/actions";
+
+const { data: samplingRoutes, meta } = await getSamplingRoutesService();
+
+// Returns empty array on 403 (permission denied)
+if (samplingRoutes.length === 0 && meta.total === 0) {
+  console.log("No sampling routes found or access denied");
+}
+```
+
+</CodeGroup>
+
+<Note>
+On permission errors (403), this function returns an empty data array with zero total instead of throwing an error.
+</Note>
+
+---
+
+### getSamplingRouteService
+
+Retrieves a single sampling route by ID.
+
+<ParamField path="id" type="string" required>
+  Unique sampling route identifier
+</ParamField>
+
+<ResponseField name="data" type="SamplingRoute">
+  Complete sampling route object with site and technician details
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getSamplingRouteService } from "@/app/actions";
+
+const samplingRoute = await getSamplingRouteService("route-123");
+
+console.log(samplingRoute.name);
+console.log(samplingRoute.description);
+console.log(samplingRoute.site.name);
+console.log(samplingRoute.technician?.first_name);
+```
+
+```typescript With Error Handling
+import { getSamplingRouteService } from "@/app/actions";
+
+try {
+  const samplingRoute = await getSamplingRouteService(samplingRouteId);
+  return <SamplingRouteDetails route={samplingRoute} />;
+} catch (error) {
+  console.error("Error fetching sampling route:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### addSamplingRouteService
+
+Creates a new sampling route.
+
+<ParamField path="payload" type="AddSamplingRoutePayload" required>
+  Sampling route creation data
+  
+  <ParamField path="name" type="string" required>
+    Sampling route name
+  </ParamField>
+  
+  <ParamField path="description" type="string" required>
+    Sampling route description
+  </ParamField>
+  
+  <ParamField path="site_id" type="string" required>
+    Site ID where the route is located
+  </ParamField>
+  
+  <ParamField path="technician_id" type="string" optional>
+    ID of the assigned technician
+  </ParamField>
+  
+  <ParamField path="status" type="string" required>
+    Sampling route status
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="statusCode" type="number">
+    HTTP status code
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created sampling route data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addSamplingRouteService } from "@/app/actions";
+import { AddSamplingRoutePayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddSamplingRouteForm() {
+  const handleSubmit = async (data: AddSamplingRoutePayload) => {
+    const response = await addSamplingRouteService(data);
+    
+    if (response.success) {
+      toast.success("Sampling route added successfully");
+      router.push("/sampling-routes");
+    } else {
+      toast.error(response.message || "Failed to add sampling route");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript With Validation
+import { addSamplingRouteService } from "@/app/actions";
+import { ADD_SAMPLING_ROUTE_SCHEMA } from "@/schema";
+import { toast } from "sonner";
+
+const handleSubmit = async (data: unknown) => {
+  // Validate with Zod schema
+  const validated = ADD_SAMPLING_ROUTE_SCHEMA.parse(data);
+  
+  const response = await addSamplingRouteService(validated);
+  
+  if (response.success) {
+    toast.success("Sampling route added successfully");
+  }
+};
+```
+
+```typescript Without Technician
+import { addSamplingRouteService } from "@/app/actions";
+import { AddSamplingRoutePayload } from "@/schema";
+
+const payload: AddSamplingRoutePayload = {
+  name: "Weekly Plant A Route",
+  description: "Weekly sampling route covering all critical pumps in Plant A",
+  site_id: "site-123",
+  status: "Active",
+};
+
+const response = await addSamplingRouteService(payload);
+```
+
+```typescript With Technician
+import { addSamplingRouteService } from "@/app/actions";
+import { AddSamplingRoutePayload } from "@/schema";
+
+const payload: AddSamplingRoutePayload = {
+  name: "Weekly Plant A Route",
+  description: "Weekly sampling route covering all critical pumps in Plant A",
+  site_id: "site-123",
+  technician_id: "user-456",
+  status: "Active",
+};
+
+const response = await addSamplingRouteService(payload);
+```
+
+</CodeGroup>
+
+---
+
+### editSamplingRouteService
+
+Updates an existing sampling route.
+
+<ParamField path="id" type="string" required>
+  Sampling route ID to update
+</ParamField>
+
+<ParamField path="payload" type="AddSamplingRoutePayload" required>
+  Updated sampling route data (same structure as addSamplingRouteService)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editSamplingRouteService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleUpdate = async (
+  samplingRouteId: string,
+  data: AddSamplingRoutePayload
+) => {
+  const response = await editSamplingRouteService(samplingRouteId, data);
+  
+  if (response.success) {
+    toast.success("Sampling route updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+```typescript Update Technician Assignment
+import { editSamplingRouteService } from "@/app/actions";
+
+const payload = {
+  name: route.name,
+  description: route.description,
+  site_id: route.site_id,
+  technician_id: newTechnicianId,
+  status: route.status,
+};
+
+const response = await editSamplingRouteService(routeId, payload);
+```
+
+</CodeGroup>
+
+---
+
+### deleteSamplingRouteService
+
+Deletes a sampling route.
+
+<ParamField path="id" type="string" required>
+  Sampling route ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteSamplingRouteService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (samplingRouteId: string) => {
+  const response = await deleteSamplingRouteService(samplingRouteId);
+  
+  if (response.success) {
+    toast.success("Sampling route deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+<Warning>
+Deleting a sampling route may affect sampling points assigned to it. Ensure sampling points are reassigned before deletion.
+</Warning>
+
+## Type Definitions
+
+### SamplingRoute
+
+```typescript
+interface SamplingRoute {
+  id: string;
+  name: string;
+  description: string;
+  site_id: string;
+  site: {
+    id: string;
+    name: string;
+    tag: string;
+    installation_environment?: string;
+    regulations_and_standards?: string[] | null;
+  };
+  technician_id?: string | null;
+  technician?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+    role?: string;
+  } | null;
+  status: string;
+  created_at: number;
+  created_at_datetime: string;
+  updated_at: number;
+  updated_at_datetime: string;
+}
+```
+
+### SamplingRoutesMeta
+
+```typescript
+interface SamplingRoutesMeta {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+```
+
+Import from the appropriate locations:
+
+```typescript
+import {
+  getSamplingRoutesService,
+  addSamplingRouteService,
+  editSamplingRouteService,
+  deleteSamplingRouteService,
+  getSamplingRouteService,
+} from "@/app/actions";
+import { SamplingRoute } from "@/types";
+import { AddSamplingRoutePayload, ADD_SAMPLING_ROUTE_SCHEMA } from "@/schema";
+import { ApiResponse } from "@/app/actions";
+```
+
+## Related Actions
+
+- [Sampling Point Actions](/api/actions/sampling-points) - Sampling point management
+- [Sample Actions](/api/actions/samples) - Oil sample management
+- [User Actions](/api/actions/users) - Technician management

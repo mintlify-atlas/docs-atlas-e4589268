@@ -1,0 +1,578 @@
+---
+title: Sampling Point Actions
+description: Server Actions for managing sampling points and analytics
+---
+
+## Overview
+
+Sampling point actions provide CRUD operations for sampling points and analytics endpoints for dashboard metrics. All functions are located in `src/app/actions/sampling-points.ts`.
+
+## Sampling Point Operations
+
+### getSamplingPointsService
+
+Retrieves a paginated list of sampling points with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="search" type="string" optional>
+    Search term for filtering sampling points
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="SamplingPoint[]">
+  Array of sampling point objects
+</ResponseField>
+
+<ResponseField name="meta" type="SamplingPointsMeta">
+  Pagination metadata
+  
+  <ResponseField name="page" type="number">
+    Current page number
+  </ResponseField>
+  
+  <ResponseField name="limit" type="number">
+    Items per page
+  </ResponseField>
+  
+  <ResponseField name="total" type="number">
+    Total number of sampling points
+  </ResponseField>
+  
+  <ResponseField name="total_pages" type="number">
+    Total number of pages
+  </ResponseField>
+  
+  <ResponseField name="has_next" type="boolean">
+    Whether there is a next page
+  </ResponseField>
+  
+  <ResponseField name="has_prev" type="boolean">
+    Whether there is a previous page
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getSamplingPointsService } from "@/app/actions";
+
+export default async function SamplingPointsPage({ searchParams }) {
+  const params = await searchParams;
+  const page = parseInt(String(params?.page ?? 1), 10);
+  const limit = parseInt(String(params?.limit ?? 10), 10);
+  const search = typeof params?.search === "string" ? params.search : "";
+
+  const { data: samplingPoints, meta } = await getSamplingPointsService({ 
+    page, 
+    limit, 
+    search 
+  });
+
+  return <SamplingPointTable data={samplingPoints} meta={meta} />;
+}
+```
+
+```typescript With Search
+import { getSamplingPointsService } from "@/app/actions";
+
+const { data: samplingPoints, meta } = await getSamplingPointsService({
+  page: 1,
+  limit: 20,
+  search: "pump",
+});
+```
+
+```typescript Error Handling
+import { getSamplingPointsService } from "@/app/actions";
+
+const { data: samplingPoints, meta } = await getSamplingPointsService();
+
+// Returns empty array on 403 (permission denied)
+if (samplingPoints.length === 0 && meta.total === 0) {
+  console.log("No sampling points found or access denied");
+}
+```
+
+</CodeGroup>
+
+<Note>
+On permission errors (403), this function returns an empty data array with zero total instead of throwing an error.
+</Note>
+
+---
+
+### getSamplingPointService
+
+Retrieves a single sampling point by ID.
+
+<ParamField path="id" type="string" required>
+  Unique sampling point identifier
+</ParamField>
+
+<ResponseField name="data" type="SamplingPoint">
+  Complete sampling point object with parent asset and assignee details
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getSamplingPointService } from "@/app/actions";
+
+const samplingPoint = await getSamplingPointService("sp-123");
+
+console.log(samplingPoint.name);
+console.log(samplingPoint.parent_asset.name);
+console.log(samplingPoint.status);
+console.log(samplingPoint.assignee?.first_name);
+```
+
+```typescript With Error Handling
+import { getSamplingPointService } from "@/app/actions";
+
+try {
+  const samplingPoint = await getSamplingPointService(samplingPointId);
+  return <SamplingPointDetails samplingPoint={samplingPoint} />;
+} catch (error) {
+  console.error("Error fetching sampling point:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### addSamplingPointService
+
+Creates a new sampling point.
+
+<ParamField path="payload" type="AddSamplingPointPayload" required>
+  Sampling point creation data
+  
+  <ParamField path="name" type="string" required>
+    Sampling point name
+  </ParamField>
+  
+  <ParamField path="tag" type="string" required>
+    Sampling point tag/identifier
+  </ParamField>
+  
+  <ParamField path="parent_asset" type="object" required>
+    <ParamField path="id" type="string" required>
+      Parent asset ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="circuit_type" type="string" required>
+    Circuit type
+  </ParamField>
+  
+  <ParamField path="component_type" type="string" required>
+    Component type
+  </ParamField>
+  
+  <ParamField path="sample_frequency" type="string" required>
+    Sample frequency
+  </ParamField>
+  
+  <ParamField path="system_capacity" type="string" required>
+    System capacity
+  </ParamField>
+  
+  <ParamField path="current_oil_grade" type="string" required>
+    Current oil grade
+  </ParamField>
+  
+  <ParamField path="status" type="string" required>
+    Sampling point status
+  </ParamField>
+  
+  <ParamField path="severity" type="string" required>
+    Severity level
+  </ParamField>
+  
+  <ParamField path="assignee" type="object" required>
+    <ParamField path="id" type="string" required>
+      Assigned user ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="sampling_route" type="object" required>
+    <ParamField path="id" type="string" required>
+      Sampling route ID
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="sampling_port_type" type="string" required>
+    Sampling port type
+  </ParamField>
+  
+  <ParamField path="sampling_port_location" type="string" required>
+    Sampling port location
+  </ParamField>
+  
+  <ParamField path="lab_destination" type="string" required>
+    Lab destination
+  </ParamField>
+  
+  <ParamField path="sampling_volume" type="string" required>
+    Sampling volume
+  </ParamField>
+  
+  <ParamField path="special_instructions" type="string" optional>
+    Special instructions
+  </ParamField>
+  
+  <ParamField path="last_sample_date" type="string" required>
+    Last sample date
+  </ParamField>
+  
+  <ParamField path="effective_date" type="string" required>
+    Effective date
+  </ParamField>
+  
+  <ParamField path="next_due_date" type="string" required>
+    Next due date
+  </ParamField>
+  
+  <ParamField path="attachments" type="array" optional>
+    Attachments array
+    
+    <ParamField path="url" type="string" optional>
+      Attachment URL
+    </ParamField>
+    
+    <ParamField path="name" type="string" required>
+      Attachment name
+    </ParamField>
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="statusCode" type="number">
+    HTTP status code
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created sampling point data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addSamplingPointService } from "@/app/actions";
+import { AddSamplingPointPayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddSamplingPointForm() {
+  const handleSubmit = async (data: AddSamplingPointPayload) => {
+    const response = await addSamplingPointService(data);
+    
+    if (response.success) {
+      toast.success("Sampling point added successfully");
+      router.push("/sampling-points");
+    } else {
+      toast.error(response.message || "Failed to add sampling point");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript With Attachments
+import { addSamplingPointService } from "@/app/actions";
+import { AddSamplingPointPayload } from "@/schema";
+
+const payload: AddSamplingPointPayload = {
+  name: "Pump A Oil Sample",
+  tag: "SP-001",
+  parent_asset: { id: "asset-123" },
+  circuit_type: "Lubrication",
+  component_type: "Pump",
+  sample_frequency: "Monthly",
+  system_capacity: "100L",
+  current_oil_grade: "ISO VG 46",
+  status: "Active",
+  severity: "Medium",
+  assignee: { id: "user-123" },
+  sampling_route: { id: "route-123" },
+  sampling_port_type: "Drain valve",
+  sampling_port_location: "Bottom of reservoir",
+  lab_destination: "Main Lab",
+  sampling_volume: "250ml",
+  special_instructions: "Ensure pump is at operating temperature",
+  last_sample_date: "2024-02-01",
+  effective_date: "2024-01-01",
+  next_due_date: "2024-03-01",
+  attachments: [
+    { url: "https://example.com/doc.pdf", name: "Sampling Procedure" },
+  ],
+};
+
+const response = await addSamplingPointService(payload);
+```
+
+</CodeGroup>
+
+---
+
+### editSamplingPointService
+
+Updates an existing sampling point.
+
+<ParamField path="id" type="string" required>
+  Sampling point ID to update
+</ParamField>
+
+<ParamField path="payload" type="AddSamplingPointPayload" required>
+  Updated sampling point data (same structure as addSamplingPointService)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editSamplingPointService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleUpdate = async (
+  samplingPointId: string,
+  data: AddSamplingPointPayload
+) => {
+  const response = await editSamplingPointService(samplingPointId, data);
+  
+  if (response.success) {
+    toast.success("Sampling point updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteSamplingPointService
+
+Deletes a sampling point.
+
+<ParamField path="id" type="string" required>
+  Sampling point ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteSamplingPointService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (samplingPointId: string) => {
+  const response = await deleteSamplingPointService(samplingPointId);
+  
+  if (response.success) {
+    toast.success("Sampling point deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+## Analytics Operations
+
+### getSamplingPointsAnalyticsService
+
+Retrieves sampling point analytics for dashboard metrics.
+
+<ResponseField name="data" type="SamplingPointAnalytics | null">
+  Sampling point analytics data or null on error
+  
+  <ResponseField name="total_sampling_points" type="number">
+    Total number of sampling points
+  </ResponseField>
+  
+  <ResponseField name="sampling_points_due" type="number">
+    Number of sampling points due
+  </ResponseField>
+  
+  <ResponseField name="sampling_points_overdue" type="number">
+    Number of sampling points overdue
+  </ResponseField>
+  
+  <ResponseField name="total_trend_percentage" type="number">
+    Total trend percentage
+  </ResponseField>
+  
+  <ResponseField name="due_trend_percentage" type="number">
+    Due trend percentage
+  </ResponseField>
+  
+  <ResponseField name="overdue_trend_percentage" type="number">
+    Overdue trend percentage
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getSamplingPointsAnalyticsService } from "@/app/actions";
+
+export default async function Dashboard() {
+  const analytics = await getSamplingPointsAnalyticsService();
+
+  if (!analytics) {
+    return <div>Analytics unavailable</div>;
+  }
+
+  return (
+    <div>
+      <MetricCard 
+        title="Total Sampling Points" 
+        value={analytics.total_sampling_points}
+        trend={analytics.total_trend_percentage}
+      />
+      <MetricCard 
+        title="Due" 
+        value={analytics.sampling_points_due}
+        trend={analytics.due_trend_percentage}
+      />
+      <MetricCard 
+        title="Overdue" 
+        value={analytics.sampling_points_overdue}
+        trend={analytics.overdue_trend_percentage}
+      />
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+<Note>
+Returns null on permission errors (403) or network issues instead of throwing.
+</Note>
+
+## Type Definitions
+
+### SamplingPoint
+
+The complete sampling point object includes extensive details about the sampling point, parent asset, assignee, and sampling route. Key fields:
+
+```typescript
+interface SamplingPoint {
+  id: string;
+  name: string;
+  tag: string;
+  parent_asset: {
+    id: string;
+    name: string;
+    tag: string;
+    type: string;
+    // ... additional asset fields
+  };
+  circuit_type: string;
+  component_type: string;
+  sample_frequency: string;
+  system_capacity: string;
+  current_oil_grade: string;
+  status: string;
+  severity: string;
+  sampling_port_type: string;
+  sampling_port_location: string;
+  lab_destination: string;
+  sampling_volume: string;
+  special_instructions: string;
+  last_sample_date: number;
+  effective_date: number;
+  next_due_date: number;
+  assignee?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  sampling_route?: {
+    id: string;
+    name: string;
+    description?: string;
+  } | null;
+  attachments?: Array<{
+    name: string;
+    url: string;
+  }>;
+  created_at: number;
+  created_at_datetime: string;
+  updated_at: number;
+  updated_at_datetime: string;
+}
+```
+
+### SamplingPointAnalytics
+
+```typescript
+interface SamplingPointAnalytics {
+  total_sampling_points: number;
+  sampling_points_due: number;
+  sampling_points_overdue: number;
+  total_trend_percentage: number;
+  due_trend_percentage: number;
+  overdue_trend_percentage: number;
+}
+```
+
+Import from the appropriate locations:
+
+```typescript
+import {
+  getSamplingPointsService,
+  addSamplingPointService,
+  editSamplingPointService,
+  deleteSamplingPointService,
+  getSamplingPointService,
+  getSamplingPointsAnalyticsService,
+} from "@/app/actions";
+import { SamplingPoint, SamplingPointAnalytics } from "@/types";
+import { AddSamplingPointPayload, ADD_SAMPLING_POINT_SCHEMA } from "@/schema";
+import { ApiResponse } from "@/app/actions";
+```
+
+## Related Actions
+
+- [Sampling Route Actions](/api/actions/sampling-routes) - Sampling route management
+- [Sample Actions](/api/actions/samples) - Oil sample management
+- [Asset Actions](/api/actions/assets) - Parent asset management
+- [Type Definitions](/api/types/samples) - Sample type definitions

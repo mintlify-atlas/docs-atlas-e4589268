@@ -105,6 +105,18 @@ Manage oil samples with wear metals, contaminants, and particle counts.
 
 [View Sample Actions →](/api/actions/samples)
 
+### Sampling Points
+
+Create and manage sampling points on assets for oil analysis collection.
+
+[View Sampling Point Actions →](/api/actions/sampling-points)
+
+### Sampling Routes
+
+Organize sampling points into routes for systematic data collection.
+
+[View Sampling Route Actions →](/api/actions/sampling-routes)
+
 ### Alarm Management
 
 Monitor and acknowledge alarms with linked recommendations.
@@ -122,6 +134,18 @@ Create and manage maintenance recommendations with severity levels.
 Manage organizational hierarchy: organizations, sites, and departments.
 
 [View Organization Actions →](/api/actions/organizations)
+
+### User Management
+
+Manage user accounts, activation, and profiles.
+
+[View User Actions →](/api/actions/users)
+
+### Role & Permission Management
+
+Control role-based access with roles and permissions.
+
+[View Role Actions →](/api/actions/roles)
 
 ### Authentication
 
@@ -221,10 +245,22 @@ const form = useForm<AddAssetPayload>({
   <Card title="Sample Actions" icon="flask" href="/api/actions/samples">
     Explore oil sample analysis actions
   </Card>
+  <Card title="Sampling Points" icon="location-dot" href="/api/actions/sampling-points">
+    Manage sampling points on assets
+  </Card>
+  <Card title="Sampling Routes" icon="route" href="/api/actions/sampling-routes">
+    Organize sampling collection routes
+  </Card>
   <Card title="Alarm Actions" icon="bell" href="/api/actions/alarms">
     Discover alarm monitoring and acknowledgment
   </Card>
   <Card title="Recommendation Actions" icon="lightbulb" href="/api/actions/recommendations">
     View maintenance recommendation actions
+  </Card>
+  <Card title="User Management" icon="users" href="/api/actions/users">
+    Manage user accounts and profiles
+  </Card>
+  <Card title="Roles & Permissions" icon="shield" href="/api/actions/roles">
+    Control role-based access
   </Card>
 </CardGroup>

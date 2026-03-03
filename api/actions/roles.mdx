@@ -1,0 +1,620 @@
+---
+title: Role & Permission Actions
+description: Server Actions for managing roles and permissions
+---
+
+## Overview
+
+Role and permission actions provide CRUD operations for roles, permissions, and their relationships. All functions are located in `src/app/actions/roles.ts`.
+
+## Role Operations
+
+### getRolesService
+
+Retrieves a list of roles with optional filtering.
+
+<ParamField path="queryParams" type="object" optional>
+  Query parameters for filtering
+  
+  <ParamField path="name" type="string" optional>
+    Filter roles by name
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="Role[]">
+  Array of role objects
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getRolesService } from "@/app/actions";
+
+export default async function RolesPage() {
+  const roles = await getRolesService();
+
+  return <RoleList roles={roles} />;
+}
+```
+
+```typescript Filter by Name
+import { getRolesService } from "@/app/actions";
+
+const roles = await getRolesService({ name: "admin" });
+```
+
+```typescript Error Handling
+import { getRolesService } from "@/app/actions";
+
+const roles = await getRolesService();
+
+// Returns empty array on 403 (permission denied)
+if (roles.length === 0) {
+  console.log("No roles found or access denied");
+}
+```
+
+</CodeGroup>
+
+<Note>
+On permission errors (403) or network issues, this function returns an empty array instead of throwing an error.
+</Note>
+
+---
+
+### getSingleRoleService
+
+Retrieves a single role by ID.
+
+<ParamField path="id" type="string" required>
+  Unique role identifier
+</ParamField>
+
+<ResponseField name="data" type="Role">
+  Complete role object with permissions
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getSingleRoleService } from "@/app/actions";
+
+const role = await getSingleRoleService("role-123");
+
+console.log(role.name);
+console.log(role.description);
+console.log(role.permissions.length);
+```
+
+```typescript With Error Handling
+import { getSingleRoleService } from "@/app/actions";
+
+try {
+  const role = await getSingleRoleService(roleId);
+  return <RoleDetails role={role} />;
+} catch (error) {
+  console.error("Error fetching role:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### getRoleService
+
+Retrieves a single role by ID (alternative to getSingleRoleService).
+
+<ParamField path="id" type="string" required>
+  Unique role identifier
+</ParamField>
+
+<ResponseField name="data" type="Role">
+  Complete role object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getRoleService } from "@/app/actions";
+
+const role = await getRoleService("role-123");
+```
+
+</CodeGroup>
+
+<Note>
+This function provides the same functionality as `getSingleRoleService`. Use either based on your preference.
+</Note>
+
+---
+
+### addRoleService
+
+Creates a new role.
+
+<ParamField path="payload" type="AddRolePayload" required>
+  Role creation data
+  
+  <ParamField path="name" type="string" required>
+    Role name (minimum 1 character)
+  </ParamField>
+  
+  <ParamField path="description" type="string" required>
+    Role description (minimum 1 character)
+  </ParamField>
+  
+  <ParamField path="active" type="boolean" required>
+    Whether the role is active
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="statusCode" type="number">
+    HTTP status code
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created role data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addRoleService } from "@/app/actions";
+import { AddRolePayload } from "@/schema";
+import { toast } from "sonner";
+
+export function AddRoleForm() {
+  const handleSubmit = async (data: AddRolePayload) => {
+    const response = await addRoleService(data);
+    
+    if (response.success) {
+      toast.success("Role added successfully");
+      router.push("/roles");
+    } else {
+      toast.error(response.message || "Failed to add role");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```typescript With Validation
+import { addRoleService } from "@/app/actions";
+import { ADD_ROLE_SCHEMA } from "@/schema";
+import { toast } from "sonner";
+
+const handleSubmit = async (data: unknown) => {
+  // Validate with Zod schema
+  const validated = ADD_ROLE_SCHEMA.parse(data);
+  
+  const response = await addRoleService(validated);
+  
+  if (response.success) {
+    toast.success("Role added successfully");
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### editRoleService
+
+Updates an existing role.
+
+<ParamField path="id" type="string" required>
+  Role ID to update
+</ParamField>
+
+<ParamField path="payload" type="EditRolePayload" required>
+  Updated role data (same structure as AddRolePayload)
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editRoleService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleUpdate = async (roleId: string, data: EditRolePayload) => {
+  const response = await editRoleService(roleId, data);
+  
+  if (response.success) {
+    toast.success("Role updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### toggleRoleActiveStatusService
+
+Toggles the active status of a role.
+
+<ParamField path="id" type="string" required>
+  Role ID to toggle
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { toggleRoleActiveStatusService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleToggle = async (roleId: string) => {
+  const response = await toggleRoleActiveStatusService(roleId);
+  
+  if (response.success) {
+    toast.success("Role status updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteRoleService
+
+Deletes a role.
+
+<ParamField path="id" type="string" required>
+  Role ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteRoleService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (roleId: string) => {
+  const response = await deleteRoleService(roleId);
+  
+  if (response.success) {
+    toast.success("Role deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+<Warning>
+Deleting a role that is assigned to users may cause issues. Consider deactivating roles instead.
+</Warning>
+
+---
+
+### getUsersByRoleIdService
+
+Retrieves all users assigned to a specific role.
+
+<ParamField path="id" type="string" required>
+  Role ID
+</ParamField>
+
+<ResponseField name="data" type="unknown[]">
+  Array of user objects assigned to the role
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getUsersByRoleIdService } from "@/app/actions";
+
+const users = await getUsersByRoleIdService("role-123");
+
+console.log(`${users.length} users have this role`);
+```
+
+```typescript Error Handling
+import { getUsersByRoleIdService } from "@/app/actions";
+
+const users = await getUsersByRoleIdService(roleId);
+
+// Returns empty array on error
+if (users.length === 0) {
+  console.log("No users found for this role");
+}
+```
+
+</CodeGroup>
+
+<Note>
+Returns an empty array on errors instead of throwing, allowing graceful error handling.
+</Note>
+
+---
+
+## Permission Operations
+
+### getPermissionsService
+
+Retrieves a list of all available permissions.
+
+<ResponseField name="data" type="Permission[]">
+  Array of permission objects
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getPermissionsService } from "@/app/actions";
+
+export default async function PermissionsPage() {
+  const permissions = await getPermissionsService();
+
+  return <PermissionList permissions={permissions} />;
+}
+```
+
+```typescript Error Handling
+import { getPermissionsService } from "@/app/actions";
+
+const permissions = await getPermissionsService();
+
+// Returns empty array on 403 (permission denied)
+if (permissions.length === 0) {
+  console.log("No permissions found or access denied");
+}
+```
+
+</CodeGroup>
+
+<Note>
+Fetches up to 100 permissions (page=1, limit=100). Returns empty array on permission errors (403) or network issues.
+</Note>
+
+---
+
+### getPermissionsByRoleIdService
+
+Retrieves all permissions assigned to a specific role.
+
+<ParamField path="roleId" type="string" required>
+  Role ID
+</ParamField>
+
+<ResponseField name="data" type="Permission[]">
+  Array of permission objects assigned to the role
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getPermissionsByRoleIdService } from "@/app/actions";
+
+const permissions = await getPermissionsByRoleIdService("role-123");
+
+console.log(`Role has ${permissions.length} permissions`);
+permissions.forEach(p => {
+  console.log(`${p.action} on ${p.resource}`);
+});
+```
+
+```typescript Error Handling
+import { getPermissionsByRoleIdService } from "@/app/actions";
+
+const permissions = await getPermissionsByRoleIdService(roleId);
+
+// Returns empty array on error
+if (permissions.length === 0) {
+  console.log("No permissions found for this role");
+}
+```
+
+</CodeGroup>
+
+<Note>
+Handles both API response formats: permissions array directly or nested within a role object. Returns empty array on errors.
+</Note>
+
+---
+
+### addPermissionsToRoleService
+
+Assigns permissions to a role.
+
+<ParamField path="roleId" type="string" required>
+  Role ID to assign permissions to
+</ParamField>
+
+<ParamField path="permission_id" type="string[]" required>
+  Array of permission IDs to assign
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { addPermissionsToRoleService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleAddPermissions = async (
+  roleId: string,
+  permissionIds: string[]
+) => {
+  const response = await addPermissionsToRoleService(
+    roleId,
+    permissionIds
+  );
+  
+  if (response.success) {
+    toast.success("Permissions added successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+```typescript Bulk Assignment
+import { addPermissionsToRoleService } from "@/app/actions";
+
+const permissionIds = [
+  "perm-read-users",
+  "perm-write-users",
+  "perm-read-assets",
+];
+
+const response = await addPermissionsToRoleService(
+  "role-123",
+  permissionIds
+);
+```
+
+</CodeGroup>
+
+---
+
+### addPermissionService
+
+Creates a new permission.
+
+<ParamField path="payload" type="AddPermissionPayload" required>
+  Permission creation data
+  
+  <ParamField path="name" type="string" required>
+    Permission name (minimum 1 character)
+  </ParamField>
+  
+  <ParamField path="resource" type="string" required>
+    Resource the permission applies to (minimum 1 character)
+  </ParamField>
+  
+  <ParamField path="action" type="string" required>
+    Action the permission allows (minimum 1 character)
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { addPermissionService } from "@/app/actions";
+import { AddPermissionPayload } from "@/schema";
+import { toast } from "sonner";
+
+const handleSubmit = async (data: AddPermissionPayload) => {
+  const response = await addPermissionService(data);
+  
+  if (response.success) {
+    toast.success("Permission added successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+```typescript Create Multiple Permissions
+import { addPermissionService } from "@/app/actions";
+
+const permissions = [
+  { name: "Read Assets", resource: "assets", action: "read" },
+  { name: "Write Assets", resource: "assets", action: "write" },
+  { name: "Delete Assets", resource: "assets", action: "delete" },
+];
+
+for (const perm of permissions) {
+  await addPermissionService(perm);
+}
+```
+
+</CodeGroup>
+
+## Type Definitions
+
+### Role
+
+```typescript
+interface Role {
+  id: string;
+  name: string;
+  permissions: Permission[];
+  level: number;
+  description: string;
+  created_at: number;
+  created_at_datetime: string;
+  active: boolean;
+}
+```
+
+### Permission
+
+```typescript
+interface Permission {
+  id: string;
+  name: string;
+  resource: string;
+  action: string;
+  created_at: number;
+  created_at_datetime: string;
+}
+```
+
+Import types and schemas:
+
+```typescript
+import {
+  getRolesService,
+  getPermissionsService,
+  addRoleService,
+  addPermissionService,
+} from "@/app/actions";
+import {
+  AddRolePayload,
+  EditRolePayload,
+  AddPermissionPayload,
+  ADD_ROLE_SCHEMA,
+  EDIT_ROLE_SCHEMA,
+  ADD_PERMISSION_SCHEMA,
+} from "@/schema";
+import { ApiResponse } from "@/app/actions";
+```
+
+## Related Actions
+
+- [User Actions](/api/actions/users) - User management
+- [Organization Actions](/api/actions/organizations) - Organization management

@@ -1,0 +1,494 @@
+---
+title: User Management Actions
+description: Server Actions for managing users and user accounts
+---
+
+## Overview
+
+User management actions provide CRUD operations for users, including retrieval, creation, updating, activation, and deletion. All functions are located in `src/app/actions/user.ts`.
+
+## User Operations
+
+### getUsersService
+
+Retrieves a paginated list of users with optional filtering.
+
+<ParamField path="params" type="object" optional>
+  Query parameters for filtering and pagination
+  
+  <ParamField path="page" type="number" optional>
+    Page number (default: 1)
+  </ParamField>
+  
+  <ParamField path="limit" type="number" optional>
+    Items per page (default: 10)
+  </ParamField>
+  
+  <ParamField path="search" type="string" optional>
+    Search term for filtering users
+  </ParamField>
+  
+  <ParamField path="status" type="string" optional>
+    Filter by user status
+  </ParamField>
+  
+  <ParamField path="role" type="string" optional>
+    Filter by user role
+  </ParamField>
+  
+  <ParamField path="site_id" type="string" optional>
+    Filter by site ID
+  </ParamField>
+  
+  <ParamField path="organization_id" type="string" optional>
+    Filter by organization ID
+  </ParamField>
+</ParamField>
+
+<ResponseField name="data" type="USER_TYPE[]">
+  Array of user objects
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Server Component
+import { getUsersService } from "@/app/actions";
+
+export default async function UsersPage({ searchParams }) {
+  const params = await searchParams;
+  const page = parseInt(String(params?.page ?? 1), 10);
+  const limit = parseInt(String(params?.limit ?? 10), 10);
+  const search = typeof params?.search === "string" ? params.search : "";
+
+  const users = await getUsersService({ 
+    page, 
+    limit, 
+    search 
+  });
+
+  return <UserTable data={users} />;
+}
+```
+
+```typescript With Filters
+import { getUsersService } from "@/app/actions";
+
+// Filter by site and status
+const users = await getUsersService({
+  page: 1,
+  limit: 20,
+  site_id: "site-123",
+  status: "active",
+  role: "technician",
+});
+```
+
+```typescript Error Handling
+import { getUsersService } from "@/app/actions";
+
+const users = await getUsersService();
+
+// Returns empty array on 403 (permission denied)
+if (users.length === 0) {
+  console.log("No users found or access denied");
+}
+```
+
+</CodeGroup>
+
+<Note>
+On permission errors (403), this function returns an empty array instead of throwing an error. This allows pages that need user data for dropdowns to still load.
+</Note>
+
+---
+
+### viewUserService
+
+Retrieves a single user by ID.
+
+<ParamField path="id" type="string" required>
+  Unique user identifier
+</ParamField>
+
+<ResponseField name="data" type="USER_TYPE">
+  Complete user object with organization and site details
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { viewUserService } from "@/app/actions";
+
+const user = await viewUserService("user-123");
+
+console.log(user.first_name);
+console.log(user.email);
+console.log(user.organization.name);
+console.log(user.site.name);
+```
+
+```typescript With Error Handling
+import { viewUserService } from "@/app/actions";
+
+try {
+  const user = await viewUserService(userId);
+  return <UserProfile user={user} />;
+} catch (error) {
+  console.error("Error fetching user:", error);
+  return <NotFound />;
+}
+```
+
+</CodeGroup>
+
+---
+
+### getUserByIdService
+
+Retrieves a single user by ID (alternative to viewUserService).
+
+<ParamField path="id" type="string" required>
+  Unique user identifier
+</ParamField>
+
+<ResponseField name="data" type="USER_TYPE">
+  Complete user object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { getUserByIdService } from "@/app/actions";
+
+const user = await getUserByIdService("user-123");
+```
+
+</CodeGroup>
+
+<Note>
+This function provides the same functionality as `viewUserService`. Use either based on your preference.
+</Note>
+
+---
+
+### addUserService
+
+Creates a new user account.
+
+<ParamField path="payload" type="AddUserPayload" required>
+  User creation data
+  
+  <ParamField path="user" type="object" required>
+    User details object
+    
+    <ParamField path="first_name" type="string" required>
+      User's first name
+    </ParamField>
+    
+    <ParamField path="last_name" type="string" required>
+      User's last name
+    </ParamField>
+    
+    <ParamField path="email" type="string" required>
+      User's email address
+    </ParamField>
+    
+    <ParamField path="role" type="string" required>
+      User role
+    </ParamField>
+    
+    <ParamField path="status" type="string" required>
+      User status (e.g., "active", "inactive")
+    </ParamField>
+    
+    <ParamField path="phone" type="string" required>
+      User's phone number
+    </ParamField>
+    
+    <ParamField path="country" type="string" required>
+      User's country
+    </ParamField>
+    
+    <ParamField path="date_of_birth" type="string" required>
+      User's date of birth
+    </ParamField>
+    
+    <ParamField path="role_id" type="string" required>
+      ID of the role to assign
+    </ParamField>
+    
+    <ParamField path="organization" type="object" required>
+      <ParamField path="id" type="string" required>
+        Organization ID
+      </ParamField>
+    </ParamField>
+    
+    <ParamField path="site" type="object" required>
+      <ParamField path="id" type="string" required>
+        Site ID
+      </ParamField>
+    </ParamField>
+  </ParamField>
+  
+  <ParamField path="password" type="string" required>
+    Initial password for the user
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+  
+  <ResponseField name="success" type="boolean">
+    Whether the operation succeeded
+  </ResponseField>
+  
+  <ResponseField name="statusCode" type="number">
+    HTTP status code
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    Response message
+  </ResponseField>
+  
+  <ResponseField name="data" type="object" optional>
+    Created user data
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Client Component
+"use client";
+import { addUserService } from "@/app/actions";
+import { toast } from "sonner";
+
+export function AddUserForm() {
+  const handleSubmit = async (data: any) => {
+    const payload = {
+      user: {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        role: data.role,
+        status: data.status,
+        phone: data.phone,
+        country: data.country,
+        date_of_birth: data.date_of_birth,
+        role_id: data.role_id,
+        organization: { id: data.organization_id },
+        site: { id: data.site_id },
+      },
+      password: data.password,
+    };
+
+    const response = await addUserService(payload);
+    
+    if (response.success) {
+      toast.success("User added successfully");
+      router.push("/users");
+    } else {
+      toast.error(response.message || "Failed to add user");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+</CodeGroup>
+
+---
+
+### editUserService
+
+Updates an existing user account.
+
+<ParamField path="id" type="string" required>
+  User ID to update
+</ParamField>
+
+<ParamField path="payload" type="EditUserPayload" required>
+  Updated user data
+  
+  <ParamField path="user" type="object" required>
+    User details object (same fields as addUserService, excluding password)
+  </ParamField>
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { editUserService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleUpdate = async (userId: string, data: any) => {
+  const payload = {
+    user: {
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email,
+      role: data.role,
+      status: data.status,
+      phone: data.phone,
+      country: data.country,
+      date_of_birth: data.date_of_birth,
+      role_id: data.role_id,
+      organization: { id: data.organization_id },
+      site: { id: data.site_id },
+    },
+  };
+
+  const response = await editUserService(userId, payload);
+  
+  if (response.success) {
+    toast.success("User updated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### activateUserService
+
+Activates a user account.
+
+<ParamField path="id" type="string" required>
+  User ID to activate
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { activateUserService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleActivate = async (userId: string) => {
+  const response = await activateUserService(userId);
+  
+  if (response.success) {
+    toast.success("User activated successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+---
+
+### deleteUserService
+
+Deletes a user account.
+
+<ParamField path="id" type="string" required>
+  User ID to delete
+</ParamField>
+
+<ResponseField name="response" type="ApiResponse">
+  Standard API response object
+</ResponseField>
+
+<CodeGroup>
+
+```typescript Basic Usage
+import { deleteUserService } from "@/app/actions";
+import { toast } from "sonner";
+
+const handleDelete = async (userId: string) => {
+  const response = await deleteUserService(userId);
+  
+  if (response.success) {
+    toast.success("User deleted successfully");
+  } else {
+    toast.error(response.message);
+  }
+};
+```
+
+</CodeGroup>
+
+<Warning>
+Deleting a user is permanent and cannot be undone. Consider deactivating users instead of deleting them to maintain data integrity.
+</Warning>
+
+## Type Definitions
+
+### USER_TYPE
+
+The complete user object includes:
+
+```typescript
+interface USER_TYPE {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  country: string;
+  date_of_birth: string;
+  role: string;
+  role_id: string | null;
+  role_obj: unknown;
+  status: string;
+  password_hash: string;
+  organization: {
+    id: string;
+    name: string;
+    logo_url: string;
+    description: string;
+    industry: string;
+    team_strength: string;
+    created_at: number;
+    created_at_datetime: string;
+    updated_at: number;
+    updated_at_datetime: string;
+  };
+  site: {
+    id: string;
+    name: string;
+    tag: string;
+    address: string;
+    city: string;
+    country: string;
+    description: string;
+    installation_environment: string;
+    manager_name: string;
+    manager_email: string;
+    manager_phone_number: string;
+    manager_location: string;
+    created_at: number;
+    created_at_datetime: string;
+    updated_at: number;
+    updated_at_datetime: string;
+  };
+  created_at: number;
+  created_at_datetime: string;
+  updated_at: number;
+  updated_at_datetime: string;
+}
+```
+
+Import from `@/app/actions/user`:
+
+```typescript
+import { USER_TYPE } from "@/app/actions/user";
+import { ApiResponse } from "@/app/actions";
+```
+
+## Related Actions
+
+- [Role Actions](/api/actions/roles) - Role and permission management
+- [Organization Actions](/api/actions/organizations) - Organization management
